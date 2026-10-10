@@ -39,7 +39,8 @@ function draw(ctx: CanvasRenderingContext2D, g: SnakeState) {
 export function SnakeDemo() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const game = useRef<SnakeState>(newGame(SIZE));
+  // Deterministic first frame so prerendering is stable; real games start from a random seed.
+  const game = useRef<SnakeState>(newGame(SIZE, () => 0.37));
   const [mode, setMode] = useState<Mode>("ready");
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(0);

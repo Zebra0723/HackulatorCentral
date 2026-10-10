@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element -- poster must render before any JS/media; intrinsic 4:5 size is fixed */
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PauseIcon, PlayIcon, ReplayIcon, SoundOffIcon, SoundOnIcon } from "./icons";
 

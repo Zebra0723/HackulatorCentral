@@ -121,7 +121,7 @@ export function quote(build: Build): Quote {
   }
 
   if (tier.includesCustomUi) {
-    lines.push({ key: "custom-ui", label: "Custom UI", amount: 0, note: `Included in ${tier.name}` });
+    lines.push({ key: "custom-ui", label: "Custom UI", amount: 0, note: "Included in pass" });
   } else if (build.customUi) {
     lines.push({ key: "custom-ui", label: "Custom UI", amount: PRICES.customUi });
   }

@@ -116,7 +116,7 @@ export function Configurator() {
                   <input type="checkbox" checked readOnly disabled aria-label={`${g.name}, included`} />
                   <span className="check-row__body">
                     <span className="check-row__name">{g.name}</span>
-                    <span className="check-row__sub"> · {g.description}</span>
+                    <span className="check-row__sub">{g.description}</span>
                   </span>
                   <span className="check-row__price">Included</span>
                 </div>
@@ -143,7 +143,6 @@ export function Configurator() {
                     <span className="check-row__body">
                       <span className="check-row__name">{p.name}</span>
                       <span className="check-row__sub" id={`${ids}-pack-${p.id}`}>
-                        {" · "}
                         {titles.join(", ")}
                         {p.unannouncedTitles > 0 && ", third game to be announced"}
                       </span>
@@ -186,7 +185,7 @@ export function Configurator() {
                     />
                     <span className="check-row__body">
                       <span className="check-row__name">{g.name}</span>
-                      <span className="check-row__sub"> · {g.description}</span>
+                      <span className="check-row__sub">{g.description}</span>
                     </span>
                     <span className="check-row__price">{priceText}</span>
                   </label>
@@ -235,7 +234,7 @@ export function Configurator() {
             <span className="check-row__body">
               <span className="check-row__name">Custom UI</span>
               {build.tier === "all-games-forever" && (
-                <span className="check-row__sub"> · Not included in All Games Forever</span>
+                <span className="check-row__sub">Not included in All Games Forever</span>
               )}
             </span>
             <span className="check-row__price">
