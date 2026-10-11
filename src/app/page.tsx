@@ -1,4 +1,4 @@
-import { formatPence, isGameBuyable, isPackBuyable } from "@/config/offer";
+import { COVER_COLOURS, COVER_ICONS, PRICES, formatPence, isGameBuyable, isPackBuyable } from "@/config/offer";
 import { siteConfig } from "@/config/site";
 import { Compare } from "@/components/Compare";
 import { Configurator } from "@/components/Configurator";
@@ -10,6 +10,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { DeviceFront } from "@/components/device/DeviceFront";
 import { InteractiveHackulator } from "@/components/device/InteractiveHackulator";
 import { StaticLauncher } from "@/components/device/StaticLauncher";
+import { FillText, Marquee, ScrollFx } from "@/components/scroll/ScrollFx";
 import { loadCatalogue } from "@/lib/server/catalogue";
 import { dbMode } from "@/lib/server/db";
 
@@ -32,6 +33,17 @@ const INSIDE = [
   },
 ];
 
+const INSIDE_TONES = ["night", "lime", "paper", "ink"] as const;
+
+function Chapter({ n, label }: { n: string; label: string }) {
+  return (
+    <p className="chapter" data-reveal>
+      <span className="chapter__num">{n}</span>
+      <span className="chapter__label">{label}</span>
+    </p>
+  );
+}
+
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
@@ -40,6 +52,13 @@ export default async function Home() {
   const packs = [...catalogue.packs].sort((a, b) => a.sort - b.sort);
   const singlePrices = Array.from(new Set(catalogue.games.filter(isGameBuyable).map((g) => g.pricePence!)));
   const onlineSubmissions = dbMode() !== "none";
+  const baseGames = catalogue.games.filter((g) => g.base).map((g) => g.name);
+  const stats = [
+    { value: String(baseGames.length), label: "games included", sub: baseGames.join(", ") },
+    { value: String(COVER_COLOURS.length), label: "cover colours", sub: "for your name and icon" },
+    { value: String(COVER_ICONS.length), label: "cover icons", sub: "crisp vector art" },
+    { value: formatPence(PRICES.customUi).replace(/\.00$/, ""), label: "Custom UI", sub: "fonts, colours, layout" },
+  ];
 
   return (
     <>
@@ -47,19 +66,25 @@ export default async function Home() {
         Skip to content
       </a>
       <SiteHeader />
+      <ScrollFx />
 
       <main id="main">
         {/* Hero */}
         <section className="hero" id="top" aria-labelledby="hero-title">
+          <div className="hero__bg" aria-hidden="true">
+            <span className="hero__blob hero__blob--a" />
+            <span className="hero__blob hero__blob--b" />
+          </div>
           <div className="container hero__grid">
-            <div>
+            <div className="hero__copy">
               <span className="status-pill">
                 <span className="status-pill__dot" aria-hidden="true" />
                 In development · prototype project
               </span>
               <Logo priority className="hero__logo" alt="Hackulator" />
               <h1 className="display hero__title" id="hero-title">
-                A calculator. Reimagined.
+                <span className="hero__line">A calculator.</span>{" "}
+                <span className="hero__line hero__line--mark">Reimagined.</span>
               </h1>
               <p className="lede">
                 New electronics, a colour display and games, built into the scientific calculator you already know.
@@ -76,7 +101,7 @@ export default async function Home() {
                 An independent project. Not affiliated with or endorsed by Casio. Nothing is for sale yet.
               </p>
             </div>
-            <div id="film">
+            <div id="film" className="hero__film">
               <FilmStage
                 src={conceptFilm.src}
                 poster={conceptFilm.poster}
@@ -87,18 +112,26 @@ export default async function Home() {
               />
             </div>
           </div>
+          <a className="scroll-cue" href="#overview">
+            <span>Scroll</span>
+            <span className="scroll-cue__line" aria-hidden="true" />
+          </a>
         </section>
+
+        <Marquee
+          items={["Snake", "2048", "Tetris", "Colour display", "Same familiar keys", "Custom UI", "Your name on the cover"]}
+        />
 
         {/* Overview */}
         <section className="section section--alt" id="overview" aria-labelledby="overview-title">
           <div className="container overview__grid">
-            <div className="overview__visual">
+            <div className="overview__visual" data-reveal>
               <div className="overview__device">
                 <DeviceFront screen={<StaticLauncher />} alt="The Hackulator: a familiar Casio scientific calculator with a colour display showing the games launcher" />
               </div>
             </div>
-            <div>
-              <p className="eyebrow">Overview</p>
+            <div data-reveal>
+              <Chapter n="01" label="Overview" />
               <h2 className="h2" id="overview-title">
                 Same shape. Entirely new inside.
               </h2>
@@ -124,12 +157,35 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* Statement */}
+        <section className="statement" aria-label="The idea">
+          <div className="container">
+            <FillText
+              className="statement__text"
+              text="Keep the keys your hands already know. Rebuild everything behind them around a colour screen."
+            />
+          </div>
+        </section>
+
+        {/* Numbers (all taken from the live options) */}
+        <section className="stats" aria-label="Options at a glance">
+          <div className="container stats__grid">
+            {stats.map((st, i) => (
+              <div className={`stat stat--${i}`} key={st.label} data-reveal style={{ ["--d" as string]: `${i * 80}ms` }}>
+                <span className="stat__value">{st.value}</span>
+                <span className="stat__label">{st.label}</span>
+                <span className="stat__sub">{st.sub}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Inside */}
         <section className="section dark" id="inside" aria-labelledby="inside-title">
           <div className="container">
-            <div className="section-head section-head--split">
+            <div className="section-head section-head--split" data-reveal>
               <div>
-                <p className="eyebrow">Inside</p>
+                <Chapter n="02" label="Inside" />
                 <h2 className="h2" id="inside-title">
                   Four ideas, one calculator.
                 </h2>
@@ -138,16 +194,24 @@ export default async function Home() {
                 The concept is simple. Keep what works about the calculator and rebuild the rest around a colour screen.
               </p>
             </div>
-            <div className="inside-grid">
+            <div className="stack">
               {INSIDE.map((item, i) => (
-                <article className="inside-card" key={item.title}>
-                  <span className="inside-card__num">0{i + 1}</span>
-                  <h3 className="h3">{item.title}</h3>
-                  <p>{item.body}</p>
+                <article
+                  className={`stack-card stack-card--${INSIDE_TONES[i]}`}
+                  key={item.title}
+                  style={{ ["--i" as string]: i }}
+                >
+                  <span className="stack-card__num" aria-hidden="true">
+                    0{i + 1}
+                  </span>
+                  <div className="stack-card__body">
+                    <h3 className="stack-card__title">{item.title}</h3>
+                    <p>{item.body}</p>
+                  </div>
                 </article>
               ))}
             </div>
-            <div className="status-panel">
+            <div className="status-panel" data-reveal>
               <div>
                 <h3 className="h3">Where the engineering stands</h3>
                 <p className="muted" style={{ margin: 0 }}>
@@ -180,9 +244,9 @@ export default async function Home() {
         {/* Games */}
         <section className="section" id="games" aria-labelledby="games-title">
           <div className="container">
-            <div className="section-head section-head--split">
+            <div className="section-head section-head--split" data-reveal>
               <div>
-                <p className="eyebrow">Games</p>
+                <Chapter n="03" label="Games" />
                 <h2 className="h2" id="games-title">
                   Try it. It&apos;s a calculator first.
                 </h2>
@@ -193,11 +257,13 @@ export default async function Home() {
               </p>
             </div>
 
-            <InteractiveHackulator />
+            <div data-reveal>
+              <InteractiveHackulator />
+            </div>
 
             <div className="extras-list">
               {packs.map((p) => (
-                <div className="pack-card" key={p.id}>
+                <div className="pack-card" key={p.id} data-reveal>
                   <div className="pack-card__head">
                     <h3 className="h3">{p.name}</h3>
                     {isPackBuyable(p) ? <strong>{formatPence(p.pricePence)}</strong> : <span className="tag">Planned</span>}
@@ -226,9 +292,9 @@ export default async function Home() {
         {/* Build yours */}
         <section className="section section--alt" id="build" aria-labelledby="build-title">
           <div className="container">
-            <div className="section-head section-head--split">
+            <div className="section-head section-head--split" data-reveal>
               <div>
-                <p className="eyebrow">Build Yours</p>
+                <Chapter n="04" label="Build Yours" />
                 <h2 className="h2" id="build-title">
                   Make it yours.
                 </h2>
@@ -245,8 +311,8 @@ export default async function Home() {
         {/* Lifetime options */}
         <section className="section section--tight" id="lifetime" aria-labelledby="lifetime-title">
           <div className="container">
-            <div className="section-head">
-              <p className="eyebrow">Lifetime options</p>
+            <div className="section-head" data-reveal>
+              <Chapter n="05" label="Lifetime options" />
               <h2 className="h2" id="lifetime-title">
                 Pay once. Plainly.
               </h2>
@@ -262,8 +328,8 @@ export default async function Home() {
         {/* FAQ */}
         <section className="section section--alt" id="faq" aria-labelledby="faq-title">
           <div className="container">
-            <div className="section-head">
-              <p className="eyebrow">FAQ</p>
+            <div className="section-head" data-reveal>
+              <Chapter n="06" label="FAQ" />
               <h2 className="h2" id="faq-title">
                 Questions, answered.
               </h2>
@@ -275,8 +341,8 @@ export default async function Home() {
         {/* Enquire */}
         <section className="section dark" id="enquire" aria-labelledby="enquire-title">
           <div className="container enquire">
-            <div>
-              <p className="eyebrow">Enquiries</p>
+            <div data-reveal>
+              <Chapter n="07" label="Enquiries" />
               <h2 className="h2" id="enquire-title">
                 Follow the build.
               </h2>
@@ -296,7 +362,7 @@ export default async function Home() {
                 )}
               </div>
             </div>
-            <div className="enquire__card">
+            <div className="enquire__card" data-reveal>
               <h3 className="h3">Project status</h3>
               <ul className="kv">
                 <li>

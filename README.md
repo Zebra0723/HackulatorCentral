@@ -101,6 +101,7 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
 | Pricing engine, share links, input sanitising | `src/lib/pricing.ts` |
 | Calculator parser, games, launcher (shared screen software) | `src/lib/hackos/` |
 | Real calculator photo, key map, shared screen renderer | `public/media/hackulator-front.webp`, `src/components/device/` |
+| Homepage scroll story (reveals, ticker, word-by-word statement, progress bar) | `src/components/scroll/ScrollFx.tsx`, end of `src/app/globals.css` |
 | Configurator and live preview | `src/components/Configurator.tsx`, `src/components/build/` |
 | Database, auth, orders, catalogue, devices | `src/lib/server/` |
 | API routes | `src/app/api/` (public: `enquiries`, `track/…/photos`; everything else under `admin/`) |
