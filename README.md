@@ -147,5 +147,5 @@ Also run against the production build in Chromium: an end-to-end walkthrough of 
 2. **Base price**, stock/availability, business name and fulfilment terms (`src/config/site.ts`); the site shows “to be confirmed” until then.
 3. **Official dark logo** (a provisional derivative is in use).
 4. **Arcade Pack third game** (still “to be announced”).
-5. **Rights to names and music:** Tetris, Block Blast and Space Invaders are other companies' trademarks, and the ad's soundtrack needs a licence for web use. Confirm both before launch.
+5. **Rights to names and music:** Tetris, Flappy Bird, Block Blast and Space Invaders are other companies' trademarks, and the ad's soundtrack needs a licence for web use. Confirm both before launch.
 6. **A higher-resolution front photo** would make the virtual calculator sharper; the current one is cut from the ad.

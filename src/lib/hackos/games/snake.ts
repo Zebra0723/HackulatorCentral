@@ -1,3 +1,4 @@
+import { fillRound, mixHex } from "../draw";
 import type { HKey } from "../keys";
 import { SCREEN_H, SCREEN_W, type ScreenTheme } from "../theme";
 import type { GameSim, Rand } from "./types";
@@ -15,7 +16,9 @@ const STEP_MS = 140;
 export class Snake implements GameSim {
   readonly id = "snake";
   readonly title = "Snake";
-  readonly controls = "Arrows steer · OK pause · AC restart";
+  readonly controls = "Arrows steer · edges wrap round · OK pause · AC restart";
+  /** Best score this visit (not stored anywhere). */
+  static best = 0;
   score = 0;
   over = false;
   body: P[] = [];
@@ -23,6 +26,7 @@ export class Snake implements GameSim {
   queue: Dir[] = [];
   food: P = { x: 0, y: 0 };
   private acc = 0;
+  private time = 0;
 
   constructor(private rand: Rand = Math.random, public cols = SNAKE_COLS, public rows = SNAKE_ROWS) {
     this.reset();
@@ -58,21 +62,27 @@ export class Snake implements GameSim {
     if (this.over) return;
     const next = this.queue.shift();
     if (next) this.dir = next;
-    const head = { x: this.body[0].x + VEC[this.dir].x, y: this.body[0].y + VEC[this.dir].y };
+    // Walls wrap round to the opposite side; only running into yourself ends the game.
+    const head = {
+      x: (this.body[0].x + VEC[this.dir].x + this.cols) % this.cols,
+      y: (this.body[0].y + VEC[this.dir].y + this.rows) % this.rows,
+    };
     const eats = head.x === this.food.x && head.y === this.food.y;
     const rest = eats ? this.body : this.body.slice(0, -1);
-    if (head.x < 0 || head.y < 0 || head.x >= this.cols || head.y >= this.rows || rest.some((p) => p.x === head.x && p.y === head.y)) {
+    if (rest.some((p) => p.x === head.x && p.y === head.y)) {
       this.over = true;
       return;
     }
     this.body = [head, ...rest];
     if (eats) {
       this.score++;
+      Snake.best = Math.max(Snake.best, this.score);
       this.placeFood();
     }
   }
 
   tick(dt: number) {
+    this.time += dt;
     this.acc += dt;
     while (this.acc >= STEP_MS) {
       this.acc -= STEP_MS;
@@ -83,20 +93,67 @@ export class Snake implements GameSim {
   draw(ctx: CanvasRenderingContext2D, t: ScreenTheme) {
     ctx.fillStyle = t.bg;
     ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
+    // Soft checkerboard
     ctx.fillStyle = t.panel;
-    for (let y = 0; y < this.rows; y++) for (let x = (y % 2); x < this.cols; x += 2) ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
-    ctx.fillStyle = "#e8c35a";
-    ctx.fillRect(this.food.x * CELL + 2, this.food.y * CELL + 2, CELL - 4, CELL - 4);
-    this.body.forEach((p, i) => {
-      ctx.fillStyle = t.accent;
-      ctx.globalAlpha = i === 0 ? 1 : 0.85;
-      ctx.fillRect(p.x * CELL + 1, p.y * CELL + 1, CELL - 2, CELL - 2);
-    });
+    ctx.globalAlpha = 0.55;
+    for (let y = 0; y < this.rows; y++) for (let x = y % 2; x < this.cols; x += 2) ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
     ctx.globalAlpha = 1;
-    ctx.fillStyle = t.text;
-    ctx.font = `600 9px ${t.font}`;
+
+    // Food: a pulsing apple
+    if (this.food.x >= 0) {
+      const cx = this.food.x * CELL + CELL / 2;
+      const cy = this.food.y * CELL + CELL / 2 + 0.5;
+      const pulse = 1 + Math.sin(this.time / 160) * 0.12;
+      ctx.fillStyle = "#ff5d5d";
+      ctx.globalAlpha = 0.25;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 5.2 * pulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = t.accent;
+      ctx.fillRect(cx + 0.3, cy - 5, 1.6, 2.2);
+    }
+
+    // Body: rounded segments joined to their neighbours (not across a wrap), fading towards the tail
+    const n = this.body.length;
+    for (let i = n - 1; i >= 0; i--) {
+      const p = this.body[i];
+      ctx.fillStyle = i === 0 && this.over ? "#ff5d5d" : mixHex(t.accent, t.bg, (0.45 * i) / Math.max(1, n - 1));
+      fillRound(ctx, p.x * CELL + 1, p.y * CELL + 1, CELL - 2, CELL - 2, i === 0 ? 4 : 3);
+      const q = this.body[i - 1];
+      if (q && Math.abs(q.x - p.x) + Math.abs(q.y - p.y) === 1) {
+        const x = Math.min(p.x, q.x) * CELL + (p.y === q.y ? CELL / 2 : 1);
+        const y = Math.min(p.y, q.y) * CELL + (p.x === q.x ? CELL / 2 : 1);
+        ctx.fillRect(x, y, p.y === q.y ? CELL : CELL - 2, p.x === q.x ? CELL : CELL - 2);
+      }
+    }
+
+    // Eyes, looking where the snake is heading
+    const h = this.body[0];
+    if (h) {
+      const v = VEC[this.dir];
+      const cx = h.x * CELL + CELL / 2 + v.x * 1.5;
+      const cy = h.y * CELL + CELL / 2 + v.y * 1.5;
+      ctx.fillStyle = t.onAccent;
+      for (const s of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(cx + v.y * 2.2 * s, cy + v.x * 2.2 * s, 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Score pill
+    const label = `${this.score}${Snake.best > 0 ? `  ·  BEST ${Snake.best}` : ""}`;
+    ctx.font = `700 8px ${t.font}`;
+    const w = ctx.measureText(label).width + 12;
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    fillRound(ctx, SCREEN_W - w - 4, 3, w, 12, 6);
+    ctx.fillStyle = "#ffffff";
     ctx.textAlign = "right";
-    ctx.fillText(String(this.score), SCREEN_W - 4, 10);
+    ctx.fillText(label, SCREEN_W - 10, 12);
     ctx.textAlign = "left";
   }
 }

@@ -1,4 +1,5 @@
 import { CalcError, evaluate, formatResult } from "./calc";
+import { fillRound, strokeRound } from "./draw";
 import { Game2048 } from "./games/g2048";
 import { Snake } from "./games/snake";
 import { Tetris } from "./games/tetris";
@@ -240,16 +241,21 @@ export class HackOS {
     else if (this.mode === "launcher") drawLauncher(ctx, theme, this.apps, this.selected);
     else if (this.game) {
       this.game.draw(ctx, theme);
-      if (this.paused || this.game.over) drawOverlay(ctx, theme, this.game.over ? `Game over · ${this.game.score}` : "Paused", this.game.over ? "OK play again · BACK menu" : "OK resume · AC restart · BACK menu");
+      if (this.game.over) drawOverlay(ctx, theme, "Game over", `Score ${this.game.score}`, "OK play again  ·  BACK menu");
+      else if (this.paused) drawOverlay(ctx, theme, "Paused", this.game.title, "OK resume  ·  AC restart  ·  BACK menu");
     }
     if (this.toast) {
       ctx.font = `600 9px ${theme.font}`;
-      const w = ctx.measureText(this.toast.text).width + 16;
-      ctx.fillStyle = "rgba(0,0,0,0.75)";
-      ctx.fillRect((SCREEN_W - w) / 2, SCREEN_H - 22, w, 16);
+      const w = ctx.measureText(this.toast.text).width + 20;
+      ctx.fillStyle = "rgba(0,0,0,0.8)";
+      fillRound(ctx, (SCREEN_W - w) / 2, SCREEN_H - 24, w, 17, 8.5);
+      ctx.fillStyle = theme.accent;
+      ctx.beginPath();
+      ctx.arc((SCREEN_W - w) / 2 + 8, SCREEN_H - 15.5, 2, 0, Math.PI * 2);
+      ctx.fill();
       ctx.fillStyle = "#ffffff";
       ctx.textAlign = "center";
-      ctx.fillText(this.toast.text, SCREEN_W / 2, SCREEN_H - 11);
+      ctx.fillText(this.toast.text, SCREEN_W / 2 + 3, SCREEN_H - 12.5);
       ctx.textAlign = "left";
     }
   }
@@ -322,18 +328,27 @@ function genericIcon(ctx: CanvasRenderingContext2D, x: number, y: number, s: num
 export function drawLauncher(ctx: CanvasRenderingContext2D, t: ScreenTheme, apps: readonly LauncherApp[], selected: number) {
   ctx.fillStyle = t.bg;
   ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
+  // Soft glow in the corner, in the accent colour
+  const glow = ctx.createRadialGradient(SCREEN_W - 30, 0, 4, SCREEN_W - 30, 0, 150);
+  glow.addColorStop(0, t.accent);
+  glow.addColorStop(1, "transparent");
+  ctx.globalAlpha = 0.14;
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = t.accent;
+  fillRound(ctx, 8, 5, 3, 9, 1.5);
   ctx.fillStyle = t.text;
   ctx.font = `700 9px ${t.font}`;
-  ctx.fillText(t.welcome.toUpperCase(), 8, 12);
+  ctx.fillText(t.welcome.toUpperCase(), 15, 12.5);
+  ctx.font = `700 7px ${t.font}`;
+  const pw = ctx.measureText("PLAY").width + 12;
   ctx.fillStyle = t.accent;
-  ctx.textAlign = "right";
-  ctx.font = `600 8px ${t.font}`;
-  ctx.fillText("PLAY", SCREEN_W - 8, 12);
+  fillRound(ctx, SCREEN_W - 8 - pw, 4, pw, 11, 5.5);
+  ctx.fillStyle = t.onAccent;
+  ctx.textAlign = "center";
+  ctx.fillText("PLAY", SCREEN_W - 8 - pw / 2, 12);
   ctx.textAlign = "left";
-  ctx.fillStyle = t.dim;
-  ctx.globalAlpha = 0.4;
-  ctx.fillRect(8, 17, SCREEN_W - 16, 0.75);
-  ctx.globalAlpha = 1;
 
   if (!apps.length) return;
   if (t.layout === "list") {
@@ -343,13 +358,18 @@ export function drawLauncher(ctx: CanvasRenderingContext2D, t: ScreenTheme, apps
     apps.slice(start, start + visible).forEach((app, i) => {
       const idx = start + i;
       const y = 22 + i * rowH;
+      ctx.fillStyle = t.panel;
+      ctx.globalAlpha = idx === selected ? 1 : 0.55;
+      fillRound(ctx, 6, y, SCREEN_W - 12, rowH - 2, 5);
+      ctx.globalAlpha = 1;
       if (idx === selected) {
         ctx.fillStyle = t.accent;
-        ctx.globalAlpha = 0.22;
-        ctx.fillRect(6, y, SCREEN_W - 12, rowH - 2);
+        ctx.globalAlpha = 0.2;
+        fillRound(ctx, 6, y, SCREEN_W - 12, rowH - 2, 5);
         ctx.globalAlpha = 1;
-        ctx.fillStyle = t.accent;
-        ctx.fillRect(6, y, 2, rowH - 2);
+        ctx.strokeStyle = t.accent;
+        ctx.lineWidth = 1;
+        strokeRound(ctx, 6.5, y + 0.5, SCREEN_W - 13, rowH - 3, 4.5);
       }
       (TILE_ICON[app.id] ?? ((c, x, yy, s, a) => genericIcon(c, x, yy, s, a, app.name)))(ctx, 14, y + 2, 12, t.accent);
       ctx.fillStyle = t.text;
@@ -378,17 +398,22 @@ export function drawLauncher(ctx: CanvasRenderingContext2D, t: ScreenTheme, apps
     if (r < 0 || r >= rowsVisible) return;
     const x = 8 + (i % cols) * (tileW + gap);
     const y = 22 + r * (tileH + 4);
+    const sel = i === selected;
     ctx.fillStyle = t.panel;
-    ctx.fillRect(x, y, tileW, tileH);
-    if (i === selected) {
+    fillRound(ctx, x, y, tileW, tileH, 7);
+    if (sel) {
+      ctx.fillStyle = t.accent;
+      ctx.globalAlpha = 0.16;
+      fillRound(ctx, x, y, tileW, tileH, 7);
+      ctx.globalAlpha = 1;
       ctx.strokeStyle = t.accent;
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(x + 0.75, y + 0.75, tileW - 1.5, tileH - 1.5);
+      strokeRound(ctx, x + 0.75, y + 0.75, tileW - 1.5, tileH - 1.5, 6.25);
     }
     const s = 20;
     (TILE_ICON[app.id] ?? ((c, xx, yy, ss, a) => genericIcon(c, xx, yy, ss, a, app.name)))(ctx, x + (tileW - s) / 2, y + 5, s, t.accent);
-    ctx.fillStyle = app.playable ? t.text : t.dim;
-    ctx.font = `600 7.5px ${t.font}`;
+    ctx.fillStyle = sel ? t.accent : app.playable ? t.text : t.dim;
+    ctx.font = `${sel ? 700 : 600} 7.5px ${t.font}`;
     ctx.textAlign = "center";
     let label = app.name.toUpperCase();
     while (ctx.measureText(label).width > tileW - 6 && label.length > 3) label = label.slice(0, -2) + "…";
@@ -405,15 +430,29 @@ export function drawLauncher(ctx: CanvasRenderingContext2D, t: ScreenTheme, apps
   }
 }
 
-function drawOverlay(ctx: CanvasRenderingContext2D, t: ScreenTheme, title: string, hint: string) {
-  ctx.fillStyle = "rgba(0,0,0,0.62)";
+function drawOverlay(ctx: CanvasRenderingContext2D, t: ScreenTheme, title: string, detail: string, hint: string) {
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
-  ctx.fillStyle = "#ffffff";
+  const w = 196;
+  const h = 70;
+  const x = (SCREEN_W - w) / 2;
+  const y = (SCREEN_H - h) / 2;
+  ctx.fillStyle = "#151812";
+  fillRound(ctx, x, y, w, h, 10);
+  ctx.strokeStyle = "rgba(255,255,255,0.12)";
+  ctx.lineWidth = 1;
+  strokeRound(ctx, x + 0.5, y + 0.5, w - 1, h - 1, 9.5);
+  ctx.fillStyle = t.accent;
+  fillRound(ctx, x + w / 2 - 14, y + 7, 28, 3, 1.5);
   ctx.textAlign = "center";
-  ctx.font = `700 14px ${t.font}`;
-  ctx.fillText(title, SCREEN_W / 2, SCREEN_H / 2 - 4);
-  ctx.font = `500 8px ${t.font}`;
-  ctx.fillStyle = "#e6e6e6";
-  ctx.fillText(hint, SCREEN_W / 2, SCREEN_H / 2 + 12);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `800 15px ${t.font}`;
+  ctx.fillText(title, SCREEN_W / 2, y + 28);
+  ctx.fillStyle = t.accent;
+  ctx.font = `700 10px ${t.font}`;
+  ctx.fillText(detail, SCREEN_W / 2, y + 43);
+  ctx.fillStyle = "#b9bdb2";
+  ctx.font = `500 7.5px ${t.font}`;
+  ctx.fillText(hint, SCREEN_W / 2, y + 60);
   ctx.textAlign = "left";
 }

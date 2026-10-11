@@ -44,13 +44,33 @@ describe("Tetris", () => {
 });
 
 describe("Snake", () => {
-  it("grows when eating and dies at the wall", () => {
+  it("grows when eating", () => {
     const s = new Snake(() => 0, 8, 4);
     s.food = { x: s.body[0].x + 1, y: s.body[0].y };
     s.step();
     expect(s.score).toBe(1);
     expect(s.body).toHaveLength(4);
-    for (let i = 0; i < 10; i++) s.step();
+  });
+  it("wraps through walls instead of dying", () => {
+    const s = new Snake(() => 0, 8, 4);
+    s.food = { x: -1, y: -1 };
+    const y = s.body[0].y;
+    for (let i = 0; i < 20; i++) s.step();
+    expect(s.over).toBe(false);
+    expect(s.body[0].y).toBe(y);
+    expect(s.body[0].x).toBe((2 + 20) % 8);
+    s.key("UP");
+    for (let i = 0; i < 5; i++) s.step();
+    expect(s.over).toBe(false);
+    expect(s.body[0].y).toBe((y - 5 + 4 * 2) % 4);
+  });
+  it("ends the game when it runs into itself", () => {
+    const s = new Snake(() => 0, 8, 6);
+    s.body = [{ x: 3, y: 2 }, { x: 2, y: 2 }, { x: 2, y: 3 }, { x: 3, y: 3 }, { x: 4, y: 3 }, { x: 4, y: 2 }];
+    s.dir = "RIGHT";
+    s.food = { x: -1, y: -1 };
+    s.key("DOWN");
+    s.step();
     expect(s.over).toBe(true);
   });
 });

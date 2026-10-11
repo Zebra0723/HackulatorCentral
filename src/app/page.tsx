@@ -412,7 +412,7 @@ export default async function Home() {
             <p>
               The concept film, previews and web demo show a device in development, not a finished product. The web demo
               games are original code written for this site. Game names marked &ldquo;-style&rdquo; are original works
-              inspired by genres. Tetris, Block Blast and Space Invaders are trademarks of their respective owners, who
+              inspired by genres. Tetris, Flappy Bird, Block Blast and Space Invaders are trademarks of their respective owners, who
               are not affiliated with Hackulator.
             </p>
           </div>

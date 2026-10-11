@@ -144,7 +144,8 @@ export function InteractiveHackulator() {
 
       <div className="demo__panel">
         <span className="tag">Interactive web demo</span>
-        <p className="demo__mode" aria-live="polite">
+        <p className={`demo__mode demo__mode--${os.mode}`} aria-live="polite">
+          <span className="demo__mode-dot" aria-hidden="true" />
           {os.mode === "calc" ? "Calculator mode" : os.mode === "launcher" ? "Launcher" : `${os.game?.title}${os.paused ? " · paused" : ""}`}
         </p>
         <p className="small muted demo__hint">{os.controlsHint}</p>
@@ -208,9 +209,22 @@ export function InteractiveHackulator() {
             </button>
           </div>
         )}
+        <ul className="demo__keys" aria-label="Keyboard shortcuts">
+          {[
+            ["← ↑ → ↓", "move"],
+            ["Enter", "="],
+            ["Space", "OK"],
+            ["Esc", "back"],
+            ["H", "home"],
+            ["⌫", "DEL"],
+          ].map(([k, v]) => (
+            <li key={k}>
+              <kbd>{k}</kbd> {v}
+            </li>
+          ))}
+        </ul>
         <p className="small muted demo__note">
-          Runs in your browser, so it shows the idea rather than how fast the real hardware runs. Keyboard: arrows,
-          Enter (=), Space (OK), Esc (back), H (home), Backspace (DEL).
+          Runs in your browser, so it shows the idea rather than how fast the real hardware runs.
         </p>
       </div>
     </div>
