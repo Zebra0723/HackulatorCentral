@@ -54,7 +54,7 @@ export function Compare() {
       <div className="compare-wrap" role="region" aria-label="Software options compared" tabIndex={0}>
         <table className="compare">
           <caption className="visually-hidden">
-            Comparison of choosing games individually, All Games Forever and All Software Forever plus Custom UI. Prices
+            Comparison of choosing games individually, The Gamer (all games forever) and The Hacker (all software and Custom UI forever). Prices
             are extras on top of the unannounced base price.
           </caption>
           <thead>
@@ -67,11 +67,13 @@ export function Compare() {
                 <span className="price">From £0</span>
               </th>
               <th scope="col">
-                All Games Forever
+                The Gamer
+                <span className="tier-sub">All games, forever</span>
                 <span className="price">{formatPence(PRICES.allGamesForever)}</span>
               </th>
               <th scope="col">
-                All Software Forever + Custom UI
+                The Hacker
+                <span className="tier-sub">All software + Custom UI, forever</span>
                 <span className="price">{formatPence(PRICES.allSoftwareForever)}</span>
               </th>
             </tr>

@@ -15,8 +15,8 @@ export type GameId =
   | "flappy-style"
   | "pong"
   | "dino-style-runner"
-  | "block-blast-style"
-  | "space-invaders-style";
+  | "block-blast"
+  | "space-invaders";
 
 export interface Game {
   id: GameId;
@@ -36,8 +36,8 @@ export const GAMES: readonly Game[] = [
   { id: "flappy-style", name: "Flappy-style game", description: "Tap to fly through the gaps.", base: false, availableIndividually: true },
   { id: "pong", name: "Pong", description: "The classic two-paddle rally.", base: false, availableIndividually: true },
   { id: "dino-style-runner", name: "Dino-style runner", description: "A Google-Dino-style endless runner.", base: false, availableIndividually: true },
-  { id: "block-blast-style", name: "Block-Blast-style puzzle", description: "Place shapes, clear lines.", base: false, availableIndividually: true },
-  { id: "space-invaders-style", name: "Space-Invaders-style shooter", description: "Hold the line against descending waves.", base: false, availableIndividually: true },
+  { id: "block-blast", name: "Block Blast", description: "Place shapes, clear lines.", base: false, availableIndividually: true },
+  { id: "space-invaders", name: "Space Invaders", description: "Hold the line against descending waves.", base: false, availableIndividually: true },
 ] as const;
 
 export const BASE_GAME_IDS: readonly GameId[] = GAMES.filter((g) => g.base).map((g) => g.id);
@@ -68,7 +68,7 @@ export const PACKS: readonly GamePack[] = [
     id: "arcade",
     name: "Arcade Pack",
     price: 500,
-    gameIds: ["block-blast-style", "space-invaders-style"],
+    gameIds: ["block-blast", "space-invaders"],
     unannouncedTitles: 1,
     available: false,
   },
@@ -105,19 +105,19 @@ export const TIERS: readonly TierInfo[] = [
   },
   {
     id: "all-games-forever",
-    name: "All Games Forever",
+    name: "The Gamer",
     price: PRICES.allGamesForever,
     summary:
-      "Every current and future compatible game, with installation, updates and reinstallation of covered games at no extra charge. No renewal.",
+      "All games, forever. Every current and future compatible game, with installation, updates and reinstallation of covered games at no extra charge. No renewal.",
     includesAllGames: true,
     includesCustomUi: false,
   },
   {
     id: "all-software-forever",
-    name: "All Software Forever + Custom UI",
+    name: "The Hacker",
     price: PRICES.allSoftwareForever,
     summary:
-      "Every current and future compatible piece of software you want, including all games and Custom UI, with installation, updates and reinstalls of included software at no extra charge. No renewal.",
+      "All software and Custom UI, forever. Every current and future compatible piece of software you want, including all games and Custom UI, with installation, updates and reinstalls of included software at no extra charge. No renewal.",
     includesAllGames: true,
     includesCustomUi: true,
   },
@@ -125,15 +125,57 @@ export const TIERS: readonly TierInfo[] = [
 
 /** Original icon options for the cover. Artwork lives in components/CoverIcons. */
 export const COVER_ICONS = [
-  { id: "bolt", label: "Bolt" },
-  { id: "star", label: "Star" },
+  { id: "dog", label: "Dog" },
+  { id: "lightning", label: "Lightning" },
   { id: "heart", label: "Heart" },
-  { id: "rocket", label: "Rocket" },
-  { id: "note", label: "Music note" },
-  { id: "invader", label: "Pixel creature" },
+  { id: "star", label: "Star" },
+  { id: "soccer-ball", label: "Soccer ball" },
+  { id: "tennis-ball", label: "Tennis ball" },
+  { id: "paw-print", label: "Paw print" },
+  { id: "smiley", label: "Smiley face" },
 ] as const;
 
 export type CoverIconId = (typeof COVER_ICONS)[number]["id"];
+
+/** Colours for the name and icon on the cover. Gold costs extra. */
+export const COVER_COLOURS = [
+  { id: "red", label: "Red", hex: "#d32f2f", surcharge: 0 },
+  { id: "orange", label: "Orange", hex: "#f57c00", surcharge: 0 },
+  { id: "yellow", label: "Yellow", hex: "#fbc02d", surcharge: 0 },
+  { id: "green", label: "Green", hex: "#388e3c", surcharge: 0 },
+  { id: "blue", label: "Blue", hex: "#1976d2", surcharge: 0 },
+  { id: "black", label: "Black", hex: "#111111", surcharge: 0 },
+  { id: "white", label: "White", hex: "#ffffff", surcharge: 0 },
+  { id: "gold", label: "Gold", hex: "#c9a227", surcharge: 50 },
+] as const satisfies readonly { id: string; label: string; hex: string; surcharge: Pence }[];
+
+export type CoverColourId = (typeof COVER_COLOURS)[number]["id"];
+export const DEFAULT_COVER_COLOUR: CoverColourId = "white";
+
+export function getCoverColour(id: CoverColourId) {
+  return COVER_COLOURS.find((c) => c.id === id)!;
+}
+
+/** Custom UI choices. Fonts are generic system stacks, so nothing proprietary is bundled. */
+export const UI_FONTS = [
+  { id: "clean", label: "Clean", stack: 'ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif' },
+  { id: "rounded", label: "Rounded", stack: 'ui-rounded, "Arial Rounded MT Bold", "Varela Round", "Nunito", system-ui, sans-serif' },
+  { id: "mono", label: "Mono", stack: 'ui-monospace, "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace' },
+  { id: "classic", label: "Classic", stack: 'Georgia, "Times New Roman", serif' },
+] as const;
+
+export type UiFontId = (typeof UI_FONTS)[number]["id"];
+
+export const UI_THEMES = [
+  { id: "lime", label: "Lime", accent: "#b4e23c", bg: "#10140a", text: "#f3f1ec", onAccent: "#1c2606" },
+  { id: "ocean", label: "Ocean", accent: "#4fb3ff", bg: "#071521", text: "#eef6ff", onAccent: "#04213a" },
+  { id: "sunset", label: "Sunset", accent: "#ff8a3d", bg: "#1d0f08", text: "#fff3ea", onAccent: "#3a1600" },
+  { id: "berry", label: "Berry", accent: "#ff5fa2", bg: "#1b0912", text: "#ffeef5", onAccent: "#3d0620" },
+  { id: "violet", label: "Violet", accent: "#a98bff", bg: "#110d22", text: "#f3efff", onAccent: "#1d1240" },
+  { id: "paper", label: "Paper", accent: "#141413", bg: "#f4f1ea", text: "#141413", onAccent: "#f4f1ea" },
+] as const;
+
+export type UiThemeId = (typeof UI_THEMES)[number]["id"];
 
 export const COVER_NAME_MAX_LENGTH = 14;
 /** Letters, numbers, spaces and a few safe punctuation marks. */

@@ -1,5 +1,8 @@
 import {
   BASE_GAME_IDS,
+  COVER_ICONS,
+  UI_FONTS,
+  UI_THEMES,
   COVER_NAME_MAX_LENGTH,
   COVER_NAME_PATTERN,
   PRICES,
@@ -7,8 +10,13 @@ import {
   getGame,
   getPack,
   getTier,
+  DEFAULT_COVER_COLOUR,
+  getCoverColour,
+  type CoverColourId,
   type CoverIconId,
   type GameId,
+  type UiFontId,
+  type UiThemeId,
   type PackId,
   type Pence,
   type SoftwareTier,
@@ -20,8 +28,10 @@ export interface Build {
   gameIds: GameId[];
   packIds: PackId[];
   customUi: boolean;
-  coverName: { enabled: boolean; text: string };
-  coverIcon: { enabled: boolean; iconId: CoverIconId | null };
+  /** Custom UI look. Only used when Custom UI is chosen or included. */
+  ui: { font: UiFontId; theme: UiThemeId };
+  coverName: { enabled: boolean; text: string; colour: CoverColourId };
+  coverIcon: { enabled: boolean; iconId: CoverIconId | null; colour: CoverColourId };
 }
 
 export const EMPTY_BUILD: Build = {
@@ -29,8 +39,9 @@ export const EMPTY_BUILD: Build = {
   gameIds: [],
   packIds: [],
   customUi: false,
-  coverName: { enabled: false, text: "" },
-  coverIcon: { enabled: false, iconId: null },
+  ui: { font: "clean", theme: "lime" },
+  coverName: { enabled: false, text: "", colour: DEFAULT_COVER_COLOUR },
+  coverIcon: { enabled: false, iconId: null, colour: DEFAULT_COVER_COLOUR },
 };
 
 export interface LineItem {
@@ -98,6 +109,11 @@ export function validateCoverName(text: string): string | null {
   return null;
 }
 
+function pushColourSurcharge(lines: LineItem[], key: string, what: string, colour: CoverColourId) {
+  const c = getCoverColour(colour);
+  if (c.surcharge > 0) lines.push({ key, label: `${what} colour: ${c.label}`, amount: c.surcharge });
+}
+
 export function quote(build: Build): Quote {
   const lines: LineItem[] = [];
   const issues: string[] = [];
@@ -130,11 +146,13 @@ export function quote(build: Build): Quote {
     const err = validateCoverName(build.coverName.text);
     const label = err ? "Name on cover" : `Name on cover: “${build.coverName.text.trim()}”`;
     lines.push({ key: "cover-name", label, amount: PRICES.coverName });
+    pushColourSurcharge(lines, "cover-name-colour", "Name", build.coverName.colour);
     if (err) issues.push(`Name on cover: ${err}`);
   }
 
   if (build.coverIcon.enabled) {
     lines.push({ key: "cover-icon", label: "Icon on cover", amount: PRICES.coverIcon });
+    pushColourSurcharge(lines, "cover-icon-colour", "Icon", build.coverIcon.colour);
     if (!build.coverIcon.iconId) issues.push("Icon on cover: choose an icon.");
   }
 
@@ -162,6 +180,10 @@ export type BuildAction =
   | { type: "setCoverNameText"; text: string }
   | { type: "setCoverIconEnabled"; value: boolean }
   | { type: "setCoverIcon"; iconId: CoverIconId }
+  | { type: "setCoverNameColour"; colour: CoverColourId }
+  | { type: "setCoverIconColour"; colour: CoverColourId }
+  | { type: "setUiFont"; font: UiFontId }
+  | { type: "setUiTheme"; theme: UiThemeId }
   | { type: "reset" };
 
 function toggle<T>(xs: readonly T[], x: T): T[] {
@@ -194,6 +216,14 @@ export function buildReducer(build: Build, action: BuildAction): Build {
       return { ...build, coverIcon: { ...build.coverIcon, enabled: action.value } };
     case "setCoverIcon":
       return { ...build, coverIcon: { ...build.coverIcon, iconId: action.iconId } };
+    case "setCoverNameColour":
+      return { ...build, coverName: { ...build.coverName, colour: action.colour } };
+    case "setCoverIconColour":
+      return { ...build, coverIcon: { ...build.coverIcon, colour: action.colour } };
+    case "setUiFont":
+      return { ...build, ui: { ...build.ui, font: action.font } };
+    case "setUiTheme":
+      return { ...build, ui: { ...build.ui, theme: action.theme } };
     case "reset":
       return EMPTY_BUILD;
   }
@@ -204,7 +234,18 @@ export function buildSummaryText(build: Build, q: Quote = quote(build)): string 
   for (const l of q.lines) {
     out.push(`- ${l.label}: ${l.amount === 0 ? (l.note ?? "Included") : formatPence(l.amount)}`);
   }
-  if (build.coverIcon.enabled && build.coverIcon.iconId) out.push(`  Icon chosen: ${build.coverIcon.iconId}`);
+  const details: string[] = [];
+  if (build.coverName.enabled) details.push(`- Name colour: ${getCoverColour(build.coverName.colour).label}`);
+  if (build.coverIcon.enabled) {
+    const icon = COVER_ICONS.find((i) => i.id === build.coverIcon.iconId);
+    details.push(`- Icon: ${icon ? icon.label : "not chosen yet"}, ${getCoverColour(build.coverIcon.colour).label}`);
+  }
+  if (build.customUi || getTier(build.tier).includesCustomUi) {
+    const font = UI_FONTS.find((f) => f.id === build.ui.font)!;
+    const theme = UI_THEMES.find((t) => t.id === build.ui.theme)!;
+    details.push(`- Custom UI: ${font.label} font, ${theme.label} colours`);
+  }
+  if (details.length) out.push("", "Details:", ...details);
   out.push("", `Extras subtotal: ${formatPence(q.extrasSubtotal)}`, "Base price: to be confirmed");
   if (q.issues.length) out.push("", "Still to complete:", ...q.issues.map((i) => `- ${i}`));
   out.push(

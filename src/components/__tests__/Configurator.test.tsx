@@ -28,13 +28,44 @@ describe("Configurator", () => {
     render(<Configurator />);
     await user.click(screen.getByRole("checkbox", { name: /^Name on cover/ }));
     await user.type(screen.getByLabelText("Text for the cover"), "Sam");
-    await user.click(screen.getByRole("radio", { name: /^All Games Forever/ }));
+    await user.click(screen.getByRole("radio", { name: /^The Gamer/ }));
     await user.click(screen.getByRole("checkbox", { name: /^Custom UI/ }));
     expect(subtotal()).toHaveTextContent("£18.00");
-    await user.click(screen.getByRole("radio", { name: /^All Software Forever/ }));
+    await user.click(screen.getByRole("radio", { name: /^The Hacker/ }));
     expect(subtotal()).toHaveTextContent("£23.00");
     expect(screen.getByRole("checkbox", { name: /^Custom UI/ })).toBeDisabled();
     expect(screen.getByLabelText("Text for the cover")).toHaveValue("Sam");
+  });
+
+  it("prepares an order email to hackulator@dailyos.uk with the build summary", async () => {
+    const user = userEvent.setup();
+    render(<Configurator />);
+    await user.click(screen.getByRole("checkbox", { name: /^Classics Pack/ }));
+    await user.click(screen.getByRole("button", { name: "Send order by email" }));
+    const link = screen.getByRole("link", { name: "Email order", hidden: true });
+    const href = link.getAttribute("href")!;
+    expect(href.startsWith("mailto:hackulator@dailyos.uk?")).toBe(true);
+    expect(decodeURIComponent(href)).toContain("Hackulator order request");
+    expect(decodeURIComponent(href)).toContain("Extras subtotal: £5.00");
+  });
+
+  it("blocks sending an order until the build is complete", async () => {
+    const user = userEvent.setup();
+    render(<Configurator />);
+    await user.click(screen.getByRole("checkbox", { name: /^Icon on cover/ }));
+    expect(screen.getByRole("button", { name: "Send order by email" })).toBeDisabled();
+    await user.click(screen.getByRole("radio", { name: /^Dog/ }));
+    expect(screen.getByRole("button", { name: "Send order by email" })).toBeEnabled();
+  });
+
+  it("shows font, colour and a home-screen preview for Custom UI", async () => {
+    const user = userEvent.setup();
+    render(<Configurator />);
+    expect(screen.queryByRole("figure", { name: /home screen/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: /^Custom UI/ }));
+    await user.click(screen.getByRole("radio", { name: /Mono/ }));
+    await user.click(screen.getByRole("radio", { name: /Ocean/ }));
+    expect(screen.getByRole("figure", { name: /Mono font with Ocean colours/ })).toBeInTheDocument();
   });
 
   it("does not allow the unfinished Arcade Pack to be selected", () => {

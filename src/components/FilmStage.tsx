@@ -9,6 +9,9 @@ interface Props {
   src?: string;
   poster: string;
   posterFallback: string;
+  width: number;
+  height: number;
+  durationLabel: string;
 }
 
 function prefersReducedData(): boolean {
@@ -19,12 +22,12 @@ function prefersReducedData(): boolean {
 }
 
 /**
- * 4:5 concept film stage. Poster first; the video element (and its data) is
+ * Concept film stage; keeps the film's own aspect ratio. Poster first; the video element (and its data) is
  * only created once the stage is on screen and inline autoplay is
  * appropriate, or when the visitor presses play. Always muted until the
  * visitor turns sound on. Pauses when scrolled away.
  */
-export function FilmStage({ src, poster, posterFallback }: Props) {
+export function FilmStage({ src, poster, posterFallback, width, height, durationLabel }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const userPaused = useRef(false);
@@ -99,19 +102,19 @@ export function FilmStage({ src, poster, posterFallback }: Props) {
   const showVideo = activated && status !== "error" && status !== "unavailable";
   const controlsDisabled = status === "unavailable" || status === "error";
 
-  let caption = "Concept film · 15 seconds · muted until you turn sound on";
+  let caption = `Concept film · ${durationLabel} · muted until you turn sound on`;
   if (status === "unavailable") caption = "Concept film coming soon. Showing the poster for now.";
   if (status === "error") caption = "The film couldn't be loaded, so the poster is shown instead.";
 
   return (
     <figure className="film-stage dark-surface" aria-label="Hackulator concept film">
-      <div className="film-stage__frame" ref={frameRef}>
+      <div className="film-stage__frame" ref={frameRef} style={{ aspectRatio: `${width} / ${height}`, ["--film-ratio" as string]: width / height }}>
         <picture>
           <source srcSet={poster} type="image/webp" />
           <img
             src={posterFallback}
-            width={1080}
-            height={1350}
+            width={width}
+            height={height}
             alt="Hackulator logo on a black background: poster for the concept film"
             fetchPriority="high"
           />

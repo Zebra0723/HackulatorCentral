@@ -38,12 +38,12 @@ const ITEMS: { q: string; a: React.ReactNode }[] = [
     a: (
       <>
         <p>
-          It means forever. All Games Forever ({formatPence(PRICES.allGamesForever)}) covers every current and future
+          It means forever. The Gamer ({formatPence(PRICES.allGamesForever)}) covers every current and future
           compatible game, including installation, updates and reinstallation of those games, with no renewal and no
           extra charge.
         </p>
         <p>
-          All Software Forever + Custom UI ({formatPence(PRICES.allSoftwareForever)}) does the same for all compatible
+          The Hacker ({formatPence(PRICES.allSoftwareForever)}) does the same for all compatible
           software you want, games and Custom UI included. It isn&apos;t limited to the games that exist on the day you
           buy it.
         </p>
@@ -90,7 +90,7 @@ const ITEMS: { q: string; a: React.ReactNode }[] = [
     q: "Is the Arcade Pack available?",
     a: (
       <p>
-        Not yet. It will contain a Block-Blast-style puzzle, a Space-Invaders-style shooter and a third game that
+        Not yet. It will contain Block Blast, Space Invaders and a third game that
         hasn&apos;t been decided. It can&apos;t be chosen until all three are confirmed.
       </p>
     ),

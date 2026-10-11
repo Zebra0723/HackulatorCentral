@@ -7,7 +7,7 @@ const nameAndIcon: BuildAction[] = [
   { type: "setCoverNameEnabled", value: true },
   { type: "setCoverNameText", text: "Sam" },
   { type: "setCoverIconEnabled", value: true },
-  { type: "setCoverIcon", iconId: "bolt" },
+  { type: "setCoverIcon", iconId: "lightning" },
 ];
 
 describe("pricing", () => {
@@ -62,12 +62,12 @@ describe("pricing", () => {
   });
 
   it("switching tiers keeps physical extras and removes overlapping software costs", () => {
-    let b = apply({ type: "togglePack", id: "classics" }, { type: "toggleGame", id: "space-invaders-style" }, ...nameAndIcon);
+    let b = apply({ type: "togglePack", id: "classics" }, { type: "toggleGame", id: "space-invaders" }, ...nameAndIcon);
     expect(quote(b).extrasSubtotal).toBe(500 + 250 + 700);
 
     b = buildReducer(b, { type: "setTier", tier: "all-games-forever" });
-    expect(b.coverName).toEqual({ enabled: true, text: "Sam" });
-    expect(b.coverIcon).toEqual({ enabled: true, iconId: "bolt" });
+    expect(b.coverName).toEqual({ enabled: true, text: "Sam", colour: "white" });
+    expect(b.coverIcon).toEqual({ enabled: true, iconId: "lightning", colour: "white" });
     expect(quote(b).extrasSubtotal).toBe(1000 + 700);
 
     b = buildReducer(b, { type: "setTier", tier: "all-software-forever" });
@@ -99,11 +99,11 @@ describe("pricing", () => {
     expect(quote({ ...EMPTY_BUILD, gameIds: ["snake", "2048", "blocks"] }).extrasSubtotal).toBe(0);
   });
 
-  it("suggests All Games Forever when separate games cost the same or more, without switching", () => {
+  it("suggests The Gamer when separate games cost the same or more, without switching", () => {
     const b = apply(
       { type: "togglePack", id: "classics" },
-      { type: "toggleGame", id: "block-blast-style" },
-      { type: "toggleGame", id: "space-invaders-style" },
+      { type: "toggleGame", id: "block-blast" },
+      { type: "toggleGame", id: "space-invaders" },
     );
     const q = quote(b);
     expect(q.extrasSubtotal).toBe(1000);
@@ -113,6 +113,37 @@ describe("pricing", () => {
 
   it("no suggestion below the pass price", () => {
     expect(quote(apply({ type: "togglePack", id: "classics" })).suggestion).toBeNull();
+  });
+
+  it("charges £0.50 extra for gold, per item", () => {
+    const b = apply(...nameAndIcon, { type: "setCoverNameColour", colour: "gold" });
+    expect(quote(b).extrasSubtotal).toBe(750);
+    const both = buildReducer(b, { type: "setCoverIconColour", colour: "gold" });
+    expect(quote(both).extrasSubtotal).toBe(800);
+    expect(quote(buildReducer(both, { type: "setCoverIconColour", colour: "red" })).extrasSubtotal).toBe(750);
+  });
+
+  it("does not charge for gold when the name or icon is switched off", () => {
+    const b = apply({ type: "setCoverNameColour", colour: "gold" }, { type: "setCoverIconColour", colour: "gold" });
+    expect(quote(b).extrasSubtotal).toBe(0);
+  });
+
+  it("keeps colours and UI choices when switching tiers, and lists them in the summary", () => {
+    const b = apply(
+      ...nameAndIcon,
+      { type: "setCoverIconColour", colour: "gold" },
+      { type: "setUiFont", font: "mono" },
+      { type: "setUiTheme", theme: "ocean" },
+      { type: "setTier", tier: "all-software-forever" },
+      { type: "setTier", tier: "all-games-forever" },
+      { type: "setTier", tier: "all-software-forever" },
+    );
+    expect(b.coverIcon.colour).toBe("gold");
+    expect(quote(b).extrasSubtotal).toBe(2000 + 700 + 50);
+    const text = buildSummaryText(b);
+    expect(text).toContain("Custom UI: Mono font, Ocean colours");
+    expect(text).toContain("Icon: Lightning, Gold");
+    expect(text).toContain("Name colour: White");
   });
 
   it("flags an invalid cover name", () => {

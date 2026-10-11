@@ -21,10 +21,14 @@ export interface SiteConfig {
   /** Fulfilment terms URL or text. Unset: shown as "to be published". */
   fulfilmentTerms?: string;
   conceptFilm: {
-    /** e.g. "/media/hackulator_concept_ad.mp4". Unset until the file is added to /public/media. */
+    /** The supplied ad, served exactly as provided. Unset to fall back to the poster only. */
     src?: string;
     poster: string;
     posterFallback: string;
+    /** Intrinsic size of the film and poster. Sets the stage's aspect ratio. */
+    width: number;
+    height: number;
+    durationLabel: string;
   };
 }
 
@@ -32,14 +36,17 @@ export const siteConfig: SiteConfig = {
   name: "Hackulator",
   basePricePence: undefined,
   contact: {
-    email: undefined,
+    email: "hackulator@dailyos.uk",
     businessName: undefined,
   },
   availability: undefined,
   fulfilmentTerms: undefined,
   conceptFilm: {
-    src: undefined,
+    src: "/media/hackulator-from-within.mp4",
     poster: "/media/hackulator-concept-poster.webp",
     posterFallback: "/media/hackulator-concept-poster.jpg",
+    width: 1080,
+    height: 1920,
+    durationLabel: "22 seconds",
   },
 };

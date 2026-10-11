@@ -75,6 +75,9 @@ export default function Home() {
                 src={conceptFilm.src}
                 poster={conceptFilm.poster}
                 posterFallback={conceptFilm.posterFallback}
+                width={conceptFilm.width}
+                height={conceptFilm.height}
+                durationLabel={conceptFilm.durationLabel}
               />
             </div>
           </div>
@@ -235,15 +238,14 @@ export default function Home() {
                   <span className="tag">Not yet available</span>
                 </div>
                 <ul>
-                  <li>Block-Blast-style puzzle</li>
-                  <li>Space-Invaders-style shooter</li>
+                  <li>Block Blast</li>
+                  <li>Space Invaders</li>
                   <li className="tba">Third game to be announced</li>
                 </ul>
               </div>
             </div>
             <p className="small muted" style={{ marginTop: 20 }}>
-              Single compatible games are {formatPence(PRICES.singleGame)} each. Titles described as
-              &ldquo;-style&rdquo; are original games inspired by a genre, not official versions.
+              Single compatible games are {formatPence(PRICES.singleGame)} each.
             </p>
           </div>
         </section>
@@ -370,7 +372,8 @@ export default function Home() {
             </p>
             <p>
               The concept film and screens are visualisations of a device in development, not a finished product.
-              Game names marked &ldquo;-style&rdquo; are original works inspired by genres.
+              Game names marked &ldquo;-style&rdquo; are original works inspired by genres. Block Blast and Space
+              Invaders are trademarks of their respective owners, who are not affiliated with Hackulator.
             </p>
           </div>
         </div>
