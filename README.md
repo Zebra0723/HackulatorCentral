@@ -123,10 +123,10 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
 
 ## Tests
 
-`npm test` runs **76 tests** in 7 files, all passing:
+`npm test` runs **78 tests** in 7 files, all passing:
 
 - **Pricing (25):** every required example, plus no double charges, tier switching keeping cover choices, the Arcade Pack's third game staying “to be announced”, gold surcharges, share links never carrying personal text, and sanitising untrusted input.
-- **Calculator, games and OS (27):** 17 parser + 6 game + 4 OS tests covering the arithmetic parser with no `eval`, the demo unlock, Snake / 2048 / Tetris logic, and pause / restart / return.
+- **Calculator, games and OS (29):** 17 parser + 8 game + 4 OS tests covering the arithmetic parser with no `eval`, the demo unlock, Snake (wrapping through walls, ending only on self-collision) / 2048 / Tetris logic, and pause / restart / return.
 - **Backend on a real in-memory Postgres (13):**
   - login and rate limits; only password hashes are stored
   - server-side pricing of enquiries
