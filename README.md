@@ -1,107 +1,150 @@
 # Hackulator website
 
-Landing page and build configurator for **Hackulator**, an independent prototype project that puts a custom board and colour display inside a Casio fx-83GT CW+ 2nd Edition body.
+Website, build configurator, private order tracking and owner control room for **Hackulator**, an independent prototype project that puts a custom board and colour display inside an ordinary Casio scientific calculator.
 
-> **Status: design-complete local build, not deployed.** The site takes no orders or payments and sends no data anywhere. Hackulator itself is a prototype in development. Nothing on the site presents it as a finished product.
+> **Status: working locally, not deployed.** No payments are taken and no emails are sent by the site. Hackulator itself is still in development, and nothing on the site presents it as a finished product.
 
-## Stack
+---
 
-- Next.js 16 (App Router, fully static output) · React 19 · TypeScript
-- Plain CSS (`src/app/globals.css`) and a system font stack, with no bundled proprietary fonts
-- Vitest + Testing Library for unit and component tests
-- No WebGL and no third-party runtime scripts
+## What's included
 
-## Commands
+1. **Interactive virtual Hackulator** (Games section). A real calculator front (cut from the supplied ad) with clickable keys and keyboard support. It starts as a working calculator, using a proper parser rather than `eval`. The public demo sequence **HOME 2 0 4 8 OK** (shown under “Discover what's inside”) opens the launcher with playable **Snake, 2048 and Tetris**, all original code. Pause, restart, menu and back-to-calculator all work. It pauses when scrolled away or when the tab is hidden, and there's no sound.
+2. **Live Build Yours preview.** FRONT / COVER / SCREEN views. Front shows your games on the launcher. Cover shows the name and icon in your colours inside the printable area. Screen shows your Custom UI: accent, light/dark, welcome text, tiles/list layout and font, all part of the one £5 option. You can save on this device, download a summary, share a link (option IDs only, never the cover name or welcome text) and send an order request or question.
+3. **Follow Your Build.** Private tracking pages at `/track/<secret token>` showing:
+   - stage
+   - updates
+   - recorded milestones
+   - photos
+   - payments
+   - an estimate, only if you set one
 
-Requires Node.js 20.9+ (tested on Node 22) and npm.
+   Internal notes, emails and other customers' data never appear. Order numbers alone give no access.
+4. **Owner control room** at `/admin`, with password login and server-side checks on every action:
+   - dashboard
+   - orders and the tracking editor
+   - enquiries
+   - catalogue
+   - devices and service records
+   - software releases
+   - build sheets
+   - data backup
+
+The game and pack catalogue lives in the database and drives the configurator, previews, pricing, summaries and server-side order pricing. Accepted orders keep a snapshot of their configuration and prices.
+
+## Run it locally
+
+Needs Node.js 20.9+ (tested on 22) and npm.
 
 ```bash
-npm install          # install dependencies
-npm run dev          # local dev server on http://localhost:3000
-npm run build        # production build
-npm run start        # serve the production build on http://localhost:3000
-npm run lint         # ESLint
-npm run typecheck    # TypeScript, no emit
-npm test             # run all tests once
-npm run test:watch   # tests in watch mode
+npm install
+npm run admin:create -- --email you@example.com   # make your owner account (asks for a password)
+npm run dev                                        # http://localhost:3000  ·  control room: /admin
 ```
+
+Without `DATABASE_URL`, development uses a **local demo database** (embedded Postgres in `./.data/`, this computer only). The control room shows a yellow “Local demo mode” banner.
+
+Other commands:
+
+```bash
+npm run build && npm run start   # production build / serve
+npm run lint                     # ESLint
+npm run typecheck                # TypeScript
+npm test                         # all automated tests
+npm run db:schema                # writes db/schema.sql (the app also applies it automatically)
+```
+
+## Going live (needs your approval first; nothing has been deployed)
+
+The site needs a Postgres database for enquiries, tracking and the control room. The recommended option is a free **Neon** database through Vercel:
+
+1. In Vercel, open your project → **Storage** → **Create Database** → **Neon (Postgres)**, and connect it to the project. Vercel adds `DATABASE_URL` for you. Any Postgres 14+ connection string works too: put it in **Settings → Environment Variables** as `DATABASE_URL`.
+2. Deploy. Tables are created automatically on first request (or run `db/schema.sql` yourself).
+3. Create your owner account against the live database from your own computer:
+   ```bash
+   DATABASE_URL="<paste the connection string>" npm run admin:create -- --email you@example.com
+   ```
+4. Sign in at `https://<your-site>/admin`.
+
+If `DATABASE_URL` is missing in production, the public site still works. Online requests then say they aren't switched on (the email link remains), and `/admin` explains that no database is connected. Nothing falls back to browser storage or pretends to work.
+
+**Missing setup values:** just `DATABASE_URL`. See `.env.example`.
+
+## Your first admin account
+
+There is **no sign-up page and no built-in password**. The only way to create an owner account is the command above, run by you with access to the database. Passwords are stored as salted scrypt hashes, and logins are rate-limited. Running the command again for the same email resets that password and signs out its sessions. Use a long, unique password. This website account is **separate** from the public demo sequence (HOME 2 0 4 8 OK) and from any customer's device PIN; never reuse one for another.
+
+## How to update a customer's tracking (plain English)
+
+1. Go to `/admin` and sign in.
+2. Open **Orders** and tap the order (or accept a request from **Enquiries** with **Accept as order**).
+3. Use the **Update tracking** card:
+   1. **Stage**: pick the new stage from the list.
+   2. **Money received now**: type what you actually received (e.g. `5.00`) and how. A new build can't move to Building until at least £5 has been received. The deposit counts towards the total.
+   3. Tick **calculator received** when the customer's calculator arrives.
+   4. **Update for the customer**: what they'll read.
+   5. **Private note**: only you ever see this.
+   6. **Progress photos**: in the card below; upload or remove.
+   7. **Estimated ready date**: set it or press Clear. It's always shown as an estimate.
+   8. Check **“The customer will see”** (or open **Preview: what the customer sees**).
+   9. Press **Save update**. The customer's page shows it immediately; no code or redeploy needed.
+4. To send the link: **Private tracking link → Copy link**, then paste it to the customer yourself (nothing is emailed). **New link** replaces it; **Turn off** disables it.
+5. Wrong stage? Pick the right one and save. The history keeps both, and **Hide from customer** removes a mistaken entry from their page (it stays in your audit log).
+
+Delivered orders drop out of the active queue. **Archive** them when you're done; they stay under **All history**. Unpaid balances appear under **Balance owed**. Orders with payments can't be deleted, and test records can be deleted only by typing `DELETE ORD-0001`.
 
 ## Where things live
 
-| What | File |
+| What | Where |
 | --- | --- |
-| Prices, games, packs, passes, cover icons (single source of truth, integer pence) | `src/config/offer.ts` |
-| Business/contact details, base price, availability, film path (unset = honest "not yet" state) | `src/config/site.ts` |
-| Pricing engine, configurator state transitions, build summary text | `src/lib/pricing.ts` |
-| Page sections | `src/app/page.tsx` |
-| Configurator UI | `src/components/Configurator.tsx` |
-| Concept film player | `src/components/FilmStage.tsx` |
-| Snake web demo (logic / UI) | `src/lib/snake.ts`, `src/components/SnakeDemo.tsx` |
-| Brand assets | `public/brand/`, `public/media/`, `src/app/icon.png` |
-| Asset derivation script | `scripts/prepare-brand-assets.py` |
+| Prices for passes, cover and Custom UI; colour, icon and UI options; default catalogue | `src/config/offer.ts` |
+| Contact email and other business details | `src/config/site.ts` |
+| Pricing engine, share links, input sanitising | `src/lib/pricing.ts` |
+| Calculator parser, games, launcher (shared screen software) | `src/lib/hackos/` |
+| Real calculator photo, key map, shared screen renderer | `public/media/hackulator-front.webp`, `src/components/device/` |
+| Configurator and live preview | `src/components/Configurator.tsx`, `src/components/build/` |
+| Database, auth, orders, catalogue, devices | `src/lib/server/` |
+| API routes | `src/app/api/` (public: `enquiries`, `track/…/photos`; everything else under `admin/`) |
+| Control room pages | `src/app/admin/` |
+| Customer tracking page | `src/app/track/[token]/` |
+| Schema / env template | `db/schema.sql`, `.env.example` |
 
-### Concept film
+## Privacy and security notes
 
-`public/media/hackulator-from-within.mp4` is the supplied ad (*Hackulator From Within*: 1080×1920, 22 seconds, H.264 with AAC audio, about 19 MB), served exactly as provided with no re-encoding. The poster (`public/media/hackulator-concept-poster.{webp,jpg}`) is a frame taken from it at 18 seconds. To replace the film, swap the file and update `conceptFilm` in `src/config/site.ts`; the stage takes its aspect ratio from the `width` and `height` there.
+- Every admin page and API checks the session **on the server**. Writes also require a same-origin request (CSRF protection), and sessions use an httpOnly, SameSite=strict cookie.
+- Tracking tokens are 192-bit random values; they can be regenerated or turned off. `/admin`, `/track` and `/api` are excluded from search (`robots.txt`, `noindex` headers) and served with `no-store`.
+- Photos are stored privately in the database (JPEG/PNG/WebP, checked by file content, up to 4 MB). They're only served through the admin session or that order's valid tracking token.
+- Prices are recalculated on the server from the live catalogue for every request and order. Whatever the browser sends is ignored.
+- Customer-visible updates and private notes are stored separately; the tracking page reads only the visible ones.
+- Enquiries collect only a name, an email and an optional message. Share links carry option IDs only.
+- **Backup:** Control room → Home → **Download backup** (JSON of all records; excludes passwords, sessions and photo files).
+- Website admin access is not part of any customer software pass. No business data or credentials are ever sent to customer devices.
+- **Offline calculator boundary:** device records are maintained by hand; there is no live sync with the calculator's own Order Manager. A future import/export would build on the backup format (`exportAll` in `src/lib/server/devices.ts`).
 
-The player keeps the film's own aspect ratio (`object-fit: contain`) and shows the poster first. The video element only exists once the stage is at least half on screen. It autoplays muted and inline only when reduced motion and data saver are both off; otherwise it waits for Play. It pauses when scrolled away and stays paused if the visitor paused it. Sound stays off until the visitor turns it on. If the file fails to load, the poster is shown with a short notice.
+## Tests
 
-### Orders and enquiries
+`npm test` runs **76 tests** in 7 files, all passing:
 
-`contact.email` in `src/config/site.ts` is set to **hackulator@dailyos.uk**. The build summary has two buttons:
+- **Pricing (25):** every required example, plus no double charges, tier switching keeping cover choices, the Arcade Pack's third game staying “to be announced”, gold surcharges, share links never carrying personal text, and sanitising untrusted input.
+- **Calculator, games and OS (27):** 17 parser + 6 game + 4 OS tests covering the arithmetic parser with no `eval`, the demo unlock, Snake / 2048 / Tetris logic, and pause / restart / return.
+- **Backend on a real in-memory Postgres (13):**
+  - login and rate limits; only password hashes are stored
+  - server-side pricing of enquiries
+  - the £5 deposit rule (including deposit and stage in one save), with covered software jobs exempt
+  - internal notes never shown; revoked and invalid links show nothing; the order number alone gives no access
+  - delivered orders leave the queue but stay in history; paid orders can't be deleted
+  - photos checked by content and isolated per order
+  - catalogue edits propagate without changing accepted orders
+  - covered service work can't be charged
+  - the export contains no secrets
+- **Components (11):** 9 configurator tests covering flows, honest “not submitted” messaging and real submission, plus 2 film stage tests.
 
-- **Send order by email** opens the visitor's email app with an order request (subject "Hackulator order request") containing the full build summary. It's disabled until the build is complete (for example, an icon has been chosen).
-- **Enquire about this build** does the same with the subject "Hackulator build enquiry".
+Also run against the production build in Chromium: an end-to-end walkthrough of all four features on desktop and phone sizes, plus unauthenticated-access checks (401/307/403), privacy headers, keyboard and touch use, reduced motion, and no horizontal scrolling. The results are in the commit/PR notes.
 
-Nothing is sent from the site itself and there's no backend. The message only goes when the visitor presses send in their own email app. Because the base price isn't set, the order email asks Hackulator to confirm the total and availability before any payment.
+## Still needed from you
 
-## Pricing tests
-
-`npm test` runs 33 tests: 19 for pricing and transitions, 4 for the Snake logic, and 10 component tests for the configurator and film stage. Last run: **33 passed, 0 failed**.
-
-Required cases (`src/lib/pricing.test.ts`):
-
-| Case | Expected | Result |
-| --- | --- | --- |
-| Base only | £0.00 extras, base price "to be confirmed" | ✅ |
-| Classics only | £5.00 | ✅ |
-| Name + icon | £7.00, no bundle discount | ✅ |
-| The Gamer + Custom UI + name + icon | £22.00 | ✅ |
-| Name or icon in gold | +£0.50 each | ✅ |
-| The Hacker + name + icon | £27.00, no game/UI duplicates | ✅ |
-| Game already in a selected pack | not charged twice | ✅ |
-| Switching tiers | cover extras kept, overlapping software removed | ✅ |
-
-Extra coverage includes: game IDs are deduplicated; the Arcade Pack can't be selected; base games can't be added, removed or charged; The Hacker (£20) ignores a separate Custom UI charge, while The Gamer (£10) doesn't include Custom UI; colours and Custom UI choices survive tier switches and appear in the summary; the order email goes to hackulator@dailyos.uk; the all-games suggestion appears at or above £10 of separate games and never switches the build automatically; invalid cover names are flagged. Component tests drive the real configurator UI through the same transitions.
-
-## Verification performed
-
-- `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`: all clean.
-- Production build checked in headless Chromium at 1440, 768 and 390 px wide. No horizontal page scroll and no console errors.
-- Keyboard: the skip link is the first tab stop. Radio groups work with arrow keys. The mobile menu and enquiry dialogs move focus into the dialog, close with Escape and return focus to the button that opened them.
-- Reduced motion: no autoplay, and no video is downloaded until Play is pressed.
-- The film player was exercised with a temporary sample clip (removed afterwards): poster first, muted inline autoplay, offscreen pause, a manual pause staying paused, sound toggle, and fallback to the poster on a failed load.
-
-## Unresolved content inputs
-
-These are deliberately left unset or provisional. Nothing has been invented in their place.
-
-1. **Official dark logo adaptation**: not supplied. `public/brand/hackulator-logo-dark.*` is a **provisional** derivative, made by recolouring the near-black outlines and wordmark to warm white; colours and shapes are otherwise unchanged. Replace it with the official file.
-2. **Base Hackulator price**: unknown. The site shows "Base price to be confirmed" and only ever an extras subtotal; order emails ask Hackulator to confirm the total.
-3. **Business name, stock/availability and fulfilment terms**: unset in `src/config/site.ts`.
-4. **Arcade Pack third title**: shown as "Third game to be announced". The pack can't be chosen.
-5. **Single-game availability**: the five named extra titles can each be chosen at £2.50. Confirm this is intended before launch.
-6. **Install/update/reinstall terms for individually bought games**: shown as "Terms to be confirmed".
-7. **Cover name length and marking method**: the site uses a provisional 14-character limit and says the marking method is still being worked out.
-8. **Film soundtrack**: the ad's audio is published as supplied. Confirm the music is licensed for use on the website.
-
-## Deployment
-
-Not deployed. The output is fully static, so it suits Vercel; importing the repository there needs no extra configuration. Do not deploy, or connect any form or email backend, without the project owner's explicit approval.
-
-## Legal and content notes
-
-- Independent project. Not affiliated with, endorsed or sponsored by Casio. Casio and fx-83GT appear only to describe compatibility.
-- Games marked "-style" are described as original works inspired by a genre. Block Blast and Space Invaders are listed by their real names at the owner's request; the footer notes they are trademarks of their respective owners. Confirm you have the rights to use those names (and to ship those games) before selling them.
-- The concept film shows the original calculator and its branding as the base for the modification.
-- The site collects no personal data. Order and enquiry emails are written and sent by the visitor from their own email app; the optional cover name only leaves their device if they send it.
+1. **A database** (`DATABASE_URL`) and your **owner account** before going live.
+2. **Base price**, stock/availability, business name and fulfilment terms (`src/config/site.ts`); the site shows “to be confirmed” until then.
+3. **Official dark logo** (a provisional derivative is in use).
+4. **Arcade Pack third game** (still “to be announced”).
+5. **Rights to names and music:** Tetris, Block Blast and Space Invaders are other companies' trademarks, and the ad's soundtrack needs a licence for web use. Confirm both before launch.
+6. **A higher-resolution front photo** would make the virtual calculator sharper; the current one is cut from the ad.

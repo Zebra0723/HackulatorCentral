@@ -4,78 +4,96 @@
  * All amounts are GBP stored as integer pennies. Every price here is an
  * EXTRA on top of the base Hackulator price, which has not been announced.
  * Do not add a base price here until one is supplied.
+ *
+ * Games and packs form the *catalogue*. DEFAULT_CATALOGUE seeds the database;
+ * after that the owner edits the catalogue in the admin area and every part of
+ * the site (configurator, previews, summaries, server pricing) reads it from
+ * there. Pass, personalisation and colour prices live only in this file.
  */
 
 export type Pence = number;
+export type GameId = string;
+export type PackId = string;
 
-export type GameId =
-  | "snake"
-  | "2048"
-  | "blocks"
-  | "flappy-style"
-  | "pong"
-  | "dino-style-runner"
-  | "block-blast"
-  | "space-invaders";
+export type GameStatus = "development" | "released" | "available";
+export type PackStatus = "planned" | "available";
 
 export interface Game {
   id: GameId;
   name: string;
   /** Short, factual description. No performance claims. */
   description: string;
+  controls: string;
+  /** Optional preview image URL. */
+  previewMedia: string | null;
+  /** development: not finished · released: finished but not sold separately · available: can be bought. */
+  status: GameStatus;
+  compatibility: string;
+  /** Individual price; null when it can't be bought on its own. */
+  pricePence: Pence | null;
   /** Included with every Hackulator; can never be removed or charged for. */
   base: boolean;
-  /** Can be chosen as a single £2.50 extra. */
-  availableIndividually: boolean;
+  sort: number;
 }
-
-export const GAMES: readonly Game[] = [
-  { id: "snake", name: "Snake", description: "Steer, grow, avoid your own tail.", base: true, availableIndividually: false },
-  { id: "2048", name: "2048", description: "Slide and merge tiles towards 2048.", base: true, availableIndividually: false },
-  { id: "blocks", name: "Blocks", description: "A Tetris-style falling-block puzzle.", base: true, availableIndividually: false },
-  { id: "flappy-style", name: "Flappy-style game", description: "Tap to fly through the gaps.", base: false, availableIndividually: true },
-  { id: "pong", name: "Pong", description: "The classic two-paddle rally.", base: false, availableIndividually: true },
-  { id: "dino-style-runner", name: "Dino-style runner", description: "A Google-Dino-style endless runner.", base: false, availableIndividually: true },
-  { id: "block-blast", name: "Block Blast", description: "Place shapes, clear lines.", base: false, availableIndividually: true },
-  { id: "space-invaders", name: "Space Invaders", description: "Hold the line against descending waves.", base: false, availableIndividually: true },
-] as const;
-
-export const BASE_GAME_IDS: readonly GameId[] = GAMES.filter((g) => g.base).map((g) => g.id);
-
-export type PackId = "classics" | "arcade";
 
 export interface GamePack {
   id: PackId;
   name: string;
-  price: Pence;
+  pricePence: Pence;
   gameIds: readonly GameId[];
   /** Titles not yet decided. Shown as "to be announced", never invented. */
-  unannouncedTitles: number;
-  /** A pack with unannounced titles must not be selectable. */
-  available: boolean;
+  tbaTitles: number;
+  status: PackStatus;
+  sort: number;
 }
 
-export const PACKS: readonly GamePack[] = [
-  {
-    id: "classics",
-    name: "Classics Pack",
-    price: 500,
-    gameIds: ["flappy-style", "pong", "dino-style-runner"],
-    unannouncedTitles: 0,
-    available: true,
-  },
-  {
-    id: "arcade",
-    name: "Arcade Pack",
-    price: 500,
-    gameIds: ["block-blast", "space-invaders"],
-    unannouncedTitles: 1,
-    available: false,
-  },
-] as const;
+export interface Catalogue {
+  games: readonly Game[];
+  packs: readonly GamePack[];
+}
+
+const COMPAT = "Hackulator hardware with the colour display";
+
+export const DEFAULT_CATALOGUE: Catalogue = {
+  games: [
+    { id: "snake", name: "Snake", description: "Steer, grow, avoid your own tail.", controls: "Arrow keys to steer.", previewMedia: null, status: "available", compatibility: COMPAT, pricePence: null, base: true, sort: 1 },
+    { id: "2048", name: "2048", description: "Slide and merge tiles towards 2048.", controls: "Arrow keys to slide tiles.", previewMedia: null, status: "available", compatibility: COMPAT, pricePence: null, base: true, sort: 2 },
+    { id: "tetris", name: "Tetris", description: "Rotate and drop falling blocks to clear lines.", controls: "Left/right to move, up to rotate, down to drop faster.", previewMedia: null, status: "available", compatibility: COMPAT, pricePence: null, base: true, sort: 3 },
+    { id: "flappy-style", name: "Flappy-style game", description: "Tap to fly through the gaps.", controls: "OK to flap.", previewMedia: null, status: "available", compatibility: COMPAT, pricePence: 250, base: false, sort: 10 },
+    { id: "pong", name: "Pong", description: "The classic two-paddle rally.", controls: "Up/down to move your paddle.", previewMedia: null, status: "available", compatibility: COMPAT, pricePence: 250, base: false, sort: 11 },
+    { id: "dino-style-runner", name: "Dino-style runner", description: "A Google/Chrome-Dino-style endless runner.", controls: "OK to jump.", previewMedia: null, status: "available", compatibility: COMPAT, pricePence: 250, base: false, sort: 12 },
+    { id: "block-blast", name: "Block Blast", description: "Place shapes, clear lines.", controls: "Arrows to move a shape, OK to place.", previewMedia: null, status: "available", compatibility: COMPAT, pricePence: 250, base: false, sort: 20 },
+    { id: "space-invaders", name: "Space Invaders", description: "Hold the line against descending waves.", controls: "Left/right to move, OK to fire.", previewMedia: null, status: "available", compatibility: COMPAT, pricePence: 250, base: false, sort: 21 },
+  ],
+  packs: [
+    { id: "classics", name: "Classics Pack", pricePence: 500, gameIds: ["flappy-style", "pong", "dino-style-runner"], tbaTitles: 0, status: "available", sort: 1 },
+    { id: "arcade", name: "Arcade Pack", pricePence: 500, gameIds: ["block-blast", "space-invaders"], tbaTitles: 1, status: "planned", sort: 2 },
+  ],
+};
+
+/** Can this game be bought on its own? */
+export function isGameBuyable(g: Game): boolean {
+  return !g.base && g.status === "available" && g.pricePence != null;
+}
+
+/** Can this pack be bought? A pack with a title still to be announced never can. */
+export function isPackBuyable(p: GamePack): boolean {
+  return p.status === "available" && p.tbaTitles === 0;
+}
+
+export function findGame(c: Catalogue, id: GameId): Game | undefined {
+  return c.games.find((g) => g.id === id);
+}
+
+export function findPack(c: Catalogue, id: PackId): GamePack | undefined {
+  return c.packs.find((p) => p.id === id);
+}
+
+export function baseGames(c: Catalogue): Game[] {
+  return c.games.filter((g) => g.base);
+}
 
 export const PRICES = {
-  singleGame: 250,
   coverName: 300,
   coverIcon: 400,
   customUi: 500,
@@ -88,6 +106,7 @@ export type SoftwareTier = "choose" | "all-games-forever" | "all-software-foreve
 export interface TierInfo {
   id: SoftwareTier;
   name: string;
+  tagline: string;
   price: Pence;
   summary: string;
   includesAllGames: boolean;
@@ -98,6 +117,7 @@ export const TIERS: readonly TierInfo[] = [
   {
     id: "choose",
     name: "Choose games",
+    tagline: "Pay for what you pick",
     price: 0,
     summary: "Base games included. Add single games or packs if you want them.",
     includesAllGames: false,
@@ -106,6 +126,7 @@ export const TIERS: readonly TierInfo[] = [
   {
     id: "all-games-forever",
     name: "The Gamer",
+    tagline: "All games, forever",
     price: PRICES.allGamesForever,
     summary:
       "All games, forever. Every current and future compatible game, with installation, updates and reinstallation of covered games at no extra charge. No renewal.",
@@ -115,6 +136,7 @@ export const TIERS: readonly TierInfo[] = [
   {
     id: "all-software-forever",
     name: "The Hacker",
+    tagline: "All software + Custom UI, forever",
     price: PRICES.allSoftwareForever,
     summary:
       "All software and Custom UI, forever. Every current and future compatible piece of software you want, including all games and Custom UI, with installation, updates and reinstalls of included software at no extra charge. No renewal.",
@@ -153,45 +175,51 @@ export type CoverColourId = (typeof COVER_COLOURS)[number]["id"];
 export const DEFAULT_COVER_COLOUR: CoverColourId = "white";
 
 export function getCoverColour(id: CoverColourId) {
-  return COVER_COLOURS.find((c) => c.id === id)!;
+  return COVER_COLOURS.find((c) => c.id === id) ?? COVER_COLOURS[6];
 }
 
-/** Custom UI choices. Fonts are generic system stacks, so nothing proprietary is bundled. */
+/**
+ * Custom UI choices. These are settings inside the single £5 Custom UI option
+ * (or The Hacker), not separately priced extras. Fonts are generic system
+ * stacks, so nothing proprietary is bundled.
+ */
 export const UI_FONTS = [
   { id: "clean", label: "Clean", stack: 'ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif' },
   { id: "rounded", label: "Rounded", stack: 'ui-rounded, "Arial Rounded MT Bold", "Varela Round", "Nunito", system-ui, sans-serif' },
   { id: "mono", label: "Mono", stack: 'ui-monospace, "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace' },
   { id: "classic", label: "Classic", stack: 'Georgia, "Times New Roman", serif' },
 ] as const;
-
 export type UiFontId = (typeof UI_FONTS)[number]["id"];
 
-export const UI_THEMES = [
-  { id: "lime", label: "Lime", accent: "#b4e23c", bg: "#10140a", text: "#f3f1ec", onAccent: "#1c2606" },
-  { id: "ocean", label: "Ocean", accent: "#4fb3ff", bg: "#071521", text: "#eef6ff", onAccent: "#04213a" },
-  { id: "sunset", label: "Sunset", accent: "#ff8a3d", bg: "#1d0f08", text: "#fff3ea", onAccent: "#3a1600" },
-  { id: "berry", label: "Berry", accent: "#ff5fa2", bg: "#1b0912", text: "#ffeef5", onAccent: "#3d0620" },
-  { id: "violet", label: "Violet", accent: "#a98bff", bg: "#110d22", text: "#f3efff", onAccent: "#1d1240" },
-  { id: "paper", label: "Paper", accent: "#141413", bg: "#f4f1ea", text: "#141413", onAccent: "#f4f1ea" },
+export const UI_ACCENTS = [
+  { id: "lime", label: "Lime", hex: "#b4e23c" },
+  { id: "ocean", label: "Ocean", hex: "#4fb3ff" },
+  { id: "sunset", label: "Sunset", hex: "#ff8a3d" },
+  { id: "berry", label: "Berry", hex: "#ff5fa2" },
+  { id: "violet", label: "Violet", hex: "#a98bff" },
+  { id: "mint", label: "Mint", hex: "#3fd4a8" },
 ] as const;
+export type UiAccentId = (typeof UI_ACCENTS)[number]["id"];
 
-export type UiThemeId = (typeof UI_THEMES)[number]["id"];
+export const UI_APPEARANCES = [
+  { id: "dark", label: "Dark" },
+  { id: "light", label: "Light" },
+] as const;
+export type UiAppearanceId = (typeof UI_APPEARANCES)[number]["id"];
+
+export const UI_LAYOUTS = [
+  { id: "tiles", label: "Tiles" },
+  { id: "list", label: "List" },
+] as const;
+export type UiLayoutId = (typeof UI_LAYOUTS)[number]["id"];
+
+export const UI_WELCOME_MAX_LENGTH = 16;
+export const UI_WELCOME_PATTERN = /^[A-Za-z0-9 .,'!?\-]*$/;
+export const DEFAULT_WELCOME = "HACKULATOR";
 
 export const COVER_NAME_MAX_LENGTH = 14;
 /** Letters, numbers, spaces and a few safe punctuation marks. */
 export const COVER_NAME_PATTERN = /^[A-Za-z0-9 .'\-]+$/;
-
-export function getGame(id: GameId): Game {
-  const g = GAMES.find((x) => x.id === id);
-  if (!g) throw new Error(`Unknown game id: ${id}`);
-  return g;
-}
-
-export function getPack(id: PackId): GamePack {
-  const p = PACKS.find((x) => x.id === id);
-  if (!p) throw new Error(`Unknown pack id: ${id}`);
-  return p;
-}
 
 export function getTier(id: SoftwareTier): TierInfo {
   const t = TIERS.find((x) => x.id === id);
@@ -200,5 +228,6 @@ export function getTier(id: SoftwareTier): TierInfo {
 }
 
 export function formatPence(p: Pence): string {
-  return `£${(p / 100).toFixed(2)}`;
+  const sign = p < 0 ? "-" : "";
+  return `${sign}£${(Math.abs(p) / 100).toFixed(2)}`;
 }

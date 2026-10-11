@@ -56,6 +56,11 @@ const ART: Record<CoverIconId, ReactNode> = {
   ),
 };
 
+/** Raw artwork for embedding inside another SVG (24×24 units, fill currentColor). */
+export function coverIconArt(id: CoverIconId): ReactNode {
+  return ART[id];
+}
+
 /**
  * Cut-out details (eyes, seams) use --icon-cut so the icon reads on any background;
  * set it to the surface colour the icon sits on.

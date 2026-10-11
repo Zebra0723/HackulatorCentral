@@ -21,11 +21,11 @@ const ITEMS: { q: string; a: React.ReactNode }[] = [
     a: (
       <>
         <p>
-          Every Hackulator includes Snake, 2048 and Blocks, a Tetris-style falling-block game. These are never charged
+          Every Hackulator includes Snake, 2048 and Tetris. These are never charged
           for and can&apos;t be removed from your build.
         </p>
         <p>
-          Extras are optional: single games ({formatPence(PRICES.singleGame)} each), the Classics Pack (
+          Extras are optional: single games ({formatPence(250)} each), the Classics Pack (
           {formatPence(500)}), Custom UI ({formatPence(PRICES.customUi)}), a name on the cover (
           {formatPence(PRICES.coverName)}), an icon on the cover ({formatPence(PRICES.coverIcon)}), or one of the two
           forever passes.
@@ -63,8 +63,8 @@ const ITEMS: { q: string; a: React.ReactNode }[] = [
     q: "Which calculators is it compatible with?",
     a: (
       <p>
-        The project targets the Casio fx-83GT CW+ 2nd Edition. Other models and releases aren&apos;t supported. If
-        you&apos;re unsure which version you have, ask before planning a build.
+        Hackulator is built from an ordinary Casio scientific calculator. Not every model is suitable, so ask before
+        planning a build if you want to use a calculator you already have.
       </p>
     ),
   },

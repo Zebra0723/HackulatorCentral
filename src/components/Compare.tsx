@@ -4,7 +4,7 @@ type Cell = { yes: string } | { no: string } | { tbc: string };
 
 const ROWS: { label: string; cells: [Cell, Cell, Cell] }[] = [
   {
-    label: "Snake, 2048 and Blocks",
+    label: "Snake, 2048 and Tetris",
     cells: [{ yes: "Included" }, { yes: "Included" }, { yes: "Included" }],
   },
   {

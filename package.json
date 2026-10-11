@@ -9,12 +9,17 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "admin:create": "tsx --conditions=react-server --tsconfig tsconfig.json scripts/admin-create.ts",
+    "db:schema": "tsx --conditions=react-server --tsconfig tsconfig.json scripts/print-schema.ts > db/schema.sql"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "next": "16.4.0",
+    "postgres": "^3.4.9",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.1",
@@ -27,6 +32,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
     "jsdom": "^29.1.1",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.3"
   }

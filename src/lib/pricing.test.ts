@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_BUILD, buildReducer, buildSummaryText, quote, type Build, type BuildAction } from "./pricing";
+import { DEFAULT_CATALOGUE, isPackBuyable } from "@/config/offer";
+import { EMPTY_BUILD, buildReducer, buildSummaryText, decodeShare, encodeShare, quote, sanitizeBuild, type Build, type BuildAction } from "./pricing";
 
 const apply = (...actions: BuildAction[]): Build => actions.reduce(buildReducer, EMPTY_BUILD);
 
@@ -132,8 +133,7 @@ describe("pricing", () => {
     const b = apply(
       ...nameAndIcon,
       { type: "setCoverIconColour", colour: "gold" },
-      { type: "setUiFont", font: "mono" },
-      { type: "setUiTheme", theme: "ocean" },
+      { type: "setUi", patch: { font: "mono", accent: "ocean", appearance: "light", layout: "list", welcome: "Hi Sam" } },
       { type: "setTier", tier: "all-software-forever" },
       { type: "setTier", tier: "all-games-forever" },
       { type: "setTier", tier: "all-software-forever" },
@@ -141,9 +141,52 @@ describe("pricing", () => {
     expect(b.coverIcon.colour).toBe("gold");
     expect(quote(b).extrasSubtotal).toBe(2000 + 700 + 50);
     const text = buildSummaryText(b);
-    expect(text).toContain("Custom UI: Mono font, Ocean colours");
+    expect(text).toContain("Custom UI: Mono font, Ocean accent, Light appearance, List menu, welcome text “Hi Sam”");
     expect(text).toContain("Icon: Lightning, Gold");
     expect(text).toContain("Name colour: White");
+  });
+
+  it("uses the name Tetris for the third base game", () => {
+    expect(quote(EMPTY_BUILD).lines[0].label).toBe("Snake, 2048 and Tetris");
+  });
+
+  it("keeps the Arcade Pack's third game as to be announced and unbuyable", () => {
+    const arcade = DEFAULT_CATALOGUE.packs.find((p) => p.id === "arcade")!;
+    expect(arcade.tbaTitles).toBe(1);
+    expect(arcade.gameIds).not.toContain("pac-man-style");
+    expect(isPackBuyable(arcade)).toBe(false);
+  });
+
+  it("All Software Forever replaces individual games, packs and Custom UI charges", () => {
+    const b = apply(
+      { type: "togglePack", id: "classics" },
+      { type: "toggleGame", id: "block-blast" },
+      { type: "setCustomUi", value: true },
+      { type: "setTier", tier: "all-software-forever" },
+    );
+    expect(quote(b).lines.filter((l) => l.amount > 0).map((l) => l.key)).toEqual(["tier:all-software-forever"]);
+  });
+
+  it("validates the Custom UI welcome text", () => {
+    const b = apply({ type: "setCustomUi", value: true }, { type: "setUi", patch: { welcome: "This welcome is far too long" } });
+    expect(quote(b).issues[0]).toMatch(/welcome text/);
+  });
+
+  it("share codes contain option IDs only, never personal text", () => {
+    const b = apply(...nameAndIcon, { type: "setCustomUi", value: true }, { type: "setUi", patch: { welcome: "Hi Sam" } });
+    const code = encodeShare(b);
+    const raw = Buffer.from(code.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+    expect(raw).not.toContain("Sam");
+    const back = decodeShare(code)!;
+    expect(back.coverName).toEqual({ enabled: true, text: "", colour: "white" });
+    expect(back.coverIcon.iconId).toBe("lightning");
+    expect(back.ui.welcome).toBe("HACKULATOR");
+    expect(quote(back).extrasSubtotal).toBe(quote(b).extrasSubtotal);
+  });
+
+  it("drops unknown or unavailable options from untrusted input", () => {
+    const b = sanitizeBuild({ tier: "free-stuff", packIds: ["arcade", "nope"], gameIds: ["snake", "pong", "x"], ui: { accent: "<b>" } });
+    expect(b).toMatchObject({ tier: "choose", packIds: [], gameIds: ["pong"], ui: { accent: "lime" } });
   });
 
   it("flags an invalid cover name", () => {

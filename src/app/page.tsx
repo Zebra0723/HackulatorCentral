@@ -1,15 +1,17 @@
-import { PACKS, PRICES, formatPence } from "@/config/offer";
+import { formatPence, isGameBuyable, isPackBuyable } from "@/config/offer";
 import { siteConfig } from "@/config/site";
-import { CalculatorIllustration } from "@/components/CalculatorIllustration";
 import { Compare } from "@/components/Compare";
 import { Configurator } from "@/components/Configurator";
 import { Faq } from "@/components/Faq";
 import { FilmStage } from "@/components/FilmStage";
-import { Preview2048, PreviewBlocks } from "@/components/GamePreviews";
 import { Logo } from "@/components/Logo";
 import { NAV_LINKS } from "@/components/nav";
 import { SiteHeader } from "@/components/SiteHeader";
-import { SnakeDemo } from "@/components/SnakeDemo";
+import { DeviceFront } from "@/components/device/DeviceFront";
+import { InteractiveHackulator } from "@/components/device/InteractiveHackulator";
+import { StaticLauncher } from "@/components/device/StaticLauncher";
+import { loadCatalogue } from "@/lib/server/catalogue";
+import { dbMode } from "@/lib/server/db";
 
 const INSIDE = [
   {
@@ -30,10 +32,14 @@ const INSIDE = [
   },
 ];
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
   const { conceptFilm, contact, availability, fulfilmentTerms } = siteConfig;
-  const classics = PACKS.find((p) => p.id === "classics")!;
-  const arcade = PACKS.find((p) => p.id === "arcade")!;
+  const { catalogue } = await loadCatalogue();
+  const packs = [...catalogue.packs].sort((a, b) => a.sort - b.sort);
+  const singlePrices = Array.from(new Set(catalogue.games.filter(isGameBuyable).map((g) => g.pricePence!)));
+  const onlineSubmissions = dbMode() !== "none";
 
   return (
     <>
@@ -87,7 +93,9 @@ export default function Home() {
         <section className="section section--alt" id="overview" aria-labelledby="overview-title">
           <div className="container overview__grid">
             <div className="overview__visual">
-              <CalculatorIllustration />
+              <div className="overview__device">
+                <DeviceFront screen={<StaticLauncher />} alt="The Hackulator: a familiar Casio scientific calculator with a colour display showing the games launcher" />
+              </div>
             </div>
             <div>
               <p className="eyebrow">Overview</p>
@@ -95,7 +103,7 @@ export default function Home() {
                 Same shape. Entirely new inside.
               </h2>
               <p className="lede">
-                Hackulator takes a Casio fx-83GT CW+ 2nd Edition, keeps its body and keys, and replaces the electronics
+                Hackulator takes an ordinary Casio scientific calculator, keeps its body and keys, and replaces the electronics
                 with a custom board and colour display, so the calculator in your bag can also play games.
               </p>
               <ul className="fact-list">
@@ -105,11 +113,11 @@ export default function Home() {
                 </li>
                 <li>
                   <span className="fact-k">Based on</span>
-                  <span>Casio fx-83GT CW+ 2nd Edition body and keys</span>
+                  <span>An ordinary Casio scientific calculator: same body, same keys</span>
                 </li>
                 <li>
                   <span className="fact-k">Included games</span>
-                  <span>Snake, 2048 and Blocks</span>
+                  <span>Snake, 2048 and Tetris</span>
                 </li>
               </ul>
             </div>
@@ -176,77 +184,42 @@ export default function Home() {
               <div>
                 <p className="eyebrow">Games</p>
                 <h2 className="h2" id="games-title">
-                  Three games built in.
+                  Try it. It&apos;s a calculator first.
                 </h2>
               </div>
               <p className="lede">
-                Every Hackulator comes with Snake, 2048 and Blocks. The screens below are concept previews, and Snake
-                is a small web demo you can play right here.
+                Every Hackulator comes with Snake, 2048 and Tetris. Use the calculator below for a sum, then press{" "}
+                <strong>Discover what&apos;s inside</strong> to open the games.
               </p>
             </div>
 
-            <div className="games-grid">
-              <article className="game-card">
-                <div className="game-card__screen dark-surface">
-                  <SnakeDemo />
-                </div>
-                <div className="game-card__meta">
-                  <h3 className="h3">Snake</h3>
-                  <span className="tag">Web demo</span>
-                </div>
-                <p className="muted small">
-                  Runs in your browser. It shows the idea, not how fast the hardware runs.
-                </p>
-              </article>
-              <article className="game-card">
-                <div className="game-card__screen">
-                  <Preview2048 />
-                </div>
-                <div className="game-card__meta">
-                  <h3 className="h3">2048</h3>
-                  <span className="tag">Concept preview</span>
-                </div>
-                <p className="muted small">Slide and merge tiles towards 2048.</p>
-              </article>
-              <article className="game-card">
-                <div className="game-card__screen">
-                  <PreviewBlocks />
-                </div>
-                <div className="game-card__meta">
-                  <h3 className="h3">Blocks</h3>
-                  <span className="tag">Concept preview</span>
-                </div>
-                <p className="muted small">A Tetris-style falling-block puzzle.</p>
-              </article>
-            </div>
+            <InteractiveHackulator />
 
             <div className="extras-list">
-              <div className="pack-card">
-                <div className="pack-card__head">
-                  <h3 className="h3">{classics.name}</h3>
-                  <strong>{formatPence(classics.price)}</strong>
+              {packs.map((p) => (
+                <div className="pack-card" key={p.id}>
+                  <div className="pack-card__head">
+                    <h3 className="h3">{p.name}</h3>
+                    {isPackBuyable(p) ? <strong>{formatPence(p.pricePence)}</strong> : <span className="tag">Planned</span>}
+                  </div>
+                  <ul>
+                    {p.gameIds.map((id) => (
+                      <li key={id}>{catalogue.games.find((g) => g.id === id)?.name ?? id}</li>
+                    ))}
+                    {Array.from({ length: p.tbaTitles }).map((_, i) => (
+                      <li key={`tba-${i}`} className="tba">
+                        {p.tbaTitles === 1 ? "Third game" : "Game"} to be announced
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul>
-                  <li>Flappy-style game</li>
-                  <li>Pong</li>
-                  <li>Google-Dino-style runner</li>
-                </ul>
-              </div>
-              <div className="pack-card">
-                <div className="pack-card__head">
-                  <h3 className="h3">{arcade.name}</h3>
-                  <span className="tag">Not yet available</span>
-                </div>
-                <ul>
-                  <li>Block Blast</li>
-                  <li>Space Invaders</li>
-                  <li className="tba">Third game to be announced</li>
-                </ul>
-              </div>
+              ))}
             </div>
-            <p className="small muted" style={{ marginTop: 20 }}>
-              Single compatible games are {formatPence(PRICES.singleGame)} each.
-            </p>
+            {singlePrices.length > 0 && (
+              <p className="small muted" style={{ marginTop: 20 }}>
+                Single compatible games are {singlePrices.map(formatPence).join(" or ")} each.
+              </p>
+            )}
           </div>
         </section>
 
@@ -265,7 +238,7 @@ export default function Home() {
                 it&apos;s announced.
               </p>
             </div>
-            <Configurator />
+            <Configurator catalogue={catalogue} onlineSubmissions={onlineSubmissions} email={contact.email} />
           </div>
         </section>
 
@@ -367,13 +340,14 @@ export default function Home() {
           <div className="site-footer__legal">
             <p>
               Hackulator is an independent prototype project{contact.businessName ? ` by ${contact.businessName}` : ""}.
-              It is not affiliated with, endorsed by or sponsored by Casio Computer Co., Ltd. Casio and fx-83GT are
-              trademarks of their respective owner and are used only to describe compatibility.
+              It is not affiliated with, endorsed by or sponsored by Casio Computer Co., Ltd. Casio is a trademark of its
+              owner and is used only to describe the calculator the Hackulator is built from.
             </p>
             <p>
-              The concept film and screens are visualisations of a device in development, not a finished product.
-              Game names marked &ldquo;-style&rdquo; are original works inspired by genres. Block Blast and Space
-              Invaders are trademarks of their respective owners, who are not affiliated with Hackulator.
+              The concept film, previews and web demo show a device in development, not a finished product. The web demo
+              games are original code written for this site. Game names marked &ldquo;-style&rdquo; are original works
+              inspired by genres. Tetris, Block Blast and Space Invaders are trademarks of their respective owners, who
+              are not affiliated with Hackulator.
             </p>
           </div>
         </div>
