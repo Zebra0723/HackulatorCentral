@@ -9,6 +9,11 @@ Website, build configurator, private order tracking and owner control room for *
 ## What's included
 
 1. **Interactive virtual Hackulator** (Games section). A real calculator front (cut from the supplied ad) with clickable keys and keyboard support. It starts as a working calculator, using a proper parser rather than `eval`. The public demo sequence **HOME 2 0 4 8 OK** (shown under “Discover what's inside”) opens the launcher with playable **Snake, 2048 and Tetris**, all original code. Pause, restart, menu and back-to-calculator all work. It pauses when scrolled away or when the tab is hidden, and there's no sound.
+   - **Game demos:** READY/GO intro, particles, floating points, light screen shake, and best scores kept in this browser only.
+     - Snake glides smoothly, wraps through walls, speeds up as you eat and has timed golden apples worth 3.
+     - In 2048, tiles slide, merges pop and new tiles grow in.
+     - Tetris has fair 7-piece bags, a ghost piece, hard drop (= / EXE), a short lock delay, a 3-piece next queue, line-clear flashes and level-ups.
+     - On phones, swipe or tap the screen, and hold the arrow buttons to repeat.
 2. **Live Build Yours preview.** FRONT / COVER / SCREEN views. Front shows your games on the launcher. Cover shows the name and icon in your colours inside the printable area. Screen shows your Custom UI: accent, light/dark, welcome text, tiles/list layout and font, all part of the one £5 option. You can save on this device, download a summary, share a link (option IDs only, never the cover name or welcome text) and send an order request or question.
 3. **Follow Your Build.** Private tracking pages at `/track/<secret token>` showing:
    - stage
@@ -123,10 +128,15 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
 
 ## Tests
 
-`npm test` runs **78 tests** in 7 files, all passing:
+`npm test` runs **88 tests** in 7 files, all passing:
 
 - **Pricing (25):** every required example, plus no double charges, tier switching keeping cover choices, the Arcade Pack's third game staying “to be announced”, gold surcharges, share links never carrying personal text, and sanitising untrusted input.
-- **Calculator, games and OS (29):** 17 parser + 8 game + 4 OS tests covering the arithmetic parser with no `eval`, the demo unlock, Snake (wrapping through walls, ending only on self-collision) / 2048 / Tetris logic, and pause / restart / return.
+- **Calculator, games and OS (39):** 17 parser + 14 game + 8 OS tests covering:
+  - the arithmetic parser with no `eval`, and the demo unlock
+  - Snake: wrapping through walls, ending only on self-collision, speeding up, golden apples
+  - 2048: merging and tracked slides for the animations
+  - Tetris: line clears, the 7-piece bag, hard drop and lock delay
+  - the OS: READY/GO, = as hard drop only in Tetris, swipe/tap, best scores, and pause / restart / return
 - **Backend on a real in-memory Postgres (13):**
   - login and rate limits; only password hashes are stored
   - server-side pricing of enquiries

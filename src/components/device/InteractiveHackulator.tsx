@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { DEFAULT_UI } from "@/lib/pricing";
 import { keyFromKeyboard, type HKey } from "@/lib/hackos/keys";
 import { DEMO_UNLOCK_SEQUENCE, HackOS } from "@/lib/hackos/os";
 import { themeFromUi } from "@/lib/hackos/theme";
 import { ArrowIcon } from "../icons";
 import { DeviceFront } from "./DeviceFront";
-import { KEYS, PHOTO, pct } from "./keymap";
+import { KEYS, PHOTO, SCREEN_RECT, pct } from "./keymap";
 import { ScreenCanvas } from "./ScreenCanvas";
 
 const SEQ_LABEL: Partial<Record<HKey, string>> = { HOME: "HOME", OK: "OK" };
@@ -69,6 +69,46 @@ export function InteractiveHackulator() {
     [os],
   );
 
+  // Swipe / tap on the screen (phones). Only active once the launcher is open.
+  const swipeStart = useRef<{ x: number; y: number; id: number } | null>(null);
+  const onScreenDown = (e: PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    wrapRef.current?.focus({ preventScroll: true });
+    swipeStart.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+  const onScreenUp = (e: PointerEvent<HTMLDivElement>) => {
+    const s = swipeStart.current;
+    swipeStart.current = null;
+    if (!s || s.id !== e.pointerId) return;
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 16) os.tap();
+    else if (Math.abs(dx) > Math.abs(dy)) os.swipe(dx > 0 ? "RIGHT" : "LEFT");
+    else os.swipe(dy > 0 ? "DOWN" : "UP");
+    rerender();
+  };
+
+  // Hold an on-screen arrow to repeat it (for games that want that, e.g. Tetris).
+  const repeatTimer = useRef<number | null>(null);
+  const stopRepeat = useCallback(() => {
+    if (repeatTimer.current !== null) window.clearTimeout(repeatTimer.current);
+    repeatTimer.current = null;
+  }, []);
+  useEffect(() => stopRepeat, [stopRepeat]);
+  const startPad = (k: HKey) => {
+    stopRepeat();
+    press(k);
+    if (!os.game?.repeatKeys?.includes(k)) return;
+    const again = (delay: number) => {
+      repeatTimer.current = window.setTimeout(() => {
+        press(k);
+        again(85);
+      }, delay);
+    };
+    again(220);
+  };
+
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     // Never hijack typing in other fields; this handler only runs while the device has focus.
     const target = e.target as HTMLElement;
@@ -114,6 +154,21 @@ export function InteractiveHackulator() {
             }
             overlay={
               <div className="device__keys">
+                {unlocked && (
+                  <div
+                    className="device__swipe"
+                    aria-hidden="true"
+                    style={{
+                      left: pct(SCREEN_RECT.x, PHOTO.w),
+                      top: pct(SCREEN_RECT.y, PHOTO.h),
+                      width: pct(SCREEN_RECT.w, PHOTO.w),
+                      height: pct(SCREEN_RECT.h, PHOTO.h),
+                    }}
+                    onPointerDown={onScreenDown}
+                    onPointerUp={onScreenUp}
+                    onPointerCancel={() => (swipeStart.current = null)}
+                  />
+                )}
                 {KEYS.map((key) => (
                   <button
                     key={key.k}
@@ -154,12 +209,32 @@ export function InteractiveHackulator() {
           <div className="demo__gamebar">
             <div className="demo__pad" role="group" aria-label="Game controls">
               {(["UP", "LEFT", "DOWN", "RIGHT"] as const).map((d) => (
-                <button key={d} type="button" className={`pad-${d.toLowerCase()}`} onClick={() => press(d)} aria-label={d.toLowerCase()}>
+                <button
+                  key={d}
+                  type="button"
+                  className={`pad-${d.toLowerCase()}`}
+                  aria-label={d.toLowerCase()}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    startPad(d);
+                  }}
+                  onPointerUp={stopRepeat}
+                  onPointerLeave={stopRepeat}
+                  onPointerCancel={stopRepeat}
+                  onClick={(e) => {
+                    if (e.detail === 0) press(d); // keyboard activation; pointer presses are handled above
+                  }}
+                >
                   <ArrowIcon dir={d.toLowerCase() as "up"} width={18} height={18} />
                 </button>
               ))}
             </div>
             <div className="demo__actions">
+              {os.game?.action && !os.game.over && (
+                <button type="button" className="btn btn-primary btn-sm demo__action" onClick={() => press(os.game!.action!.key)}>
+                  {os.game.action.label}
+                </button>
+              )}
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => press("OK")}>
                 {os.game?.over ? "Play again" : os.paused ? "Resume" : "Pause"}
               </button>

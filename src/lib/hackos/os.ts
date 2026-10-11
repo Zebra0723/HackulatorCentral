@@ -1,3 +1,4 @@
+import { getBest, submitScore } from "./bests";
 import { CalcError, evaluate, formatResult } from "./calc";
 import { fillRound, strokeRound } from "./draw";
 import { Game2048 } from "./games/g2048";
@@ -28,6 +29,11 @@ export const DEMO_GAMES: readonly LauncherApp[] = [
 ];
 
 type Mode = "calc" | "launcher" | "game";
+type Arrow = "UP" | "DOWN" | "LEFT" | "RIGHT";
+
+/** "READY… GO!" before each game starts moving. */
+export const INTRO_MS = 900;
+const GAME_OVER_GRACE_MS = 600;
 
 const KEY_TEXT: Partial<Record<HKey, string>> = {
   DOT: ".", ADD: "+", SUB: "-", MUL: "×", DIV: "÷", LPAREN: "(", RPAREN: ")",
@@ -48,6 +54,12 @@ export class HackOS {
   game: GameSim | null = null;
   paused = false;
   toast: { text: string; until: number } | null = null;
+  /** Time left on the READY/GO intro; the game doesn't move during it. */
+  intro = 0;
+  /** Set when the last finished game beat the best score in this browser. */
+  newBest = false;
+  private recorded = false;
+  private overAt = 0;
   // calculator
   expr = "";
   result = "";
@@ -115,7 +127,40 @@ export class HackOS {
     this.game = g;
     this.paused = false;
     this.mode = "game";
+    this.toast = null;
+    this.startRound();
     this.changed();
+  }
+
+  private startRound() {
+    this.intro = INTRO_MS;
+    this.newBest = false;
+    this.recorded = false;
+  }
+
+  /** Save the score once when a game ends. */
+  private checkOver() {
+    if (this.game?.over && !this.recorded) {
+      this.recorded = true;
+      this.overAt = this.clock;
+      this.newBest = submitScore(this.game.id, this.game.score);
+      this.changed();
+    }
+  }
+
+  /** A swipe on the screen. */
+  swipe(dir: Arrow) {
+    if (this.mode === "launcher") return this.press(dir);
+    if (this.mode === "game" && this.game) return this.press(this.game.swipe?.[dir] ?? dir);
+  }
+
+  /** A tap on the screen. */
+  tap() {
+    if (this.mode === "launcher") return this.press("OK");
+    if (this.mode === "game" && this.game) {
+      if (this.game.over || this.paused) return this.press("OK");
+      if (this.game.tap) return this.press(this.game.tap);
+    }
   }
 
   togglePause() {
@@ -136,6 +181,7 @@ export class HackOS {
     if (this.mode !== "game" || !this.game) return;
     this.game.reset();
     this.paused = false;
+    this.startRound();
     this.changed();
   }
 
@@ -215,19 +261,31 @@ export class HackOS {
     if (!this.game) return;
     if (k === "BACK") return this.toLauncher();
     if (k === "AC") return this.restart();
-    if (k === "OK" || k === "EXE") {
+    const ownsKey = this.game.ownKeys?.includes(k) ?? false;
+    // Let the result sink in: a key mashed at the moment of game over doesn't restart straight away.
+    if (this.game.over && this.clock - this.overAt < GAME_OVER_GRACE_MS && (k === "OK" || k === "EXE")) return;
+    if (k === "OK" || (k === "EXE" && (!ownsKey || this.game.over))) {
       if (this.game.over) return this.restart();
       return this.togglePause();
     }
     if (this.paused) return;
+    if (this.intro > 0 && ownsKey) return; // no hard drops before GO
     this.game.key(k);
+    this.checkOver();
   }
 
   /** Advance time. Callers stop calling this when the demo is hidden or offscreen. */
   tick(dt: number) {
     this.clock += dt;
     if (this.toast && this.clock > this.toast.until) this.toast = null;
-    if (this.mode === "game" && this.game && !this.paused && !this.game.over) this.game.tick(Math.min(dt, 100));
+    if (this.mode !== "game" || !this.game || this.paused) return;
+    if (this.intro > 0) {
+      this.intro = Math.max(0, this.intro - dt);
+      return;
+    }
+    // Finished games keep ticking so their end-of-game effects can play out.
+    this.game.tick(Math.min(dt, 100));
+    this.checkOver();
   }
 
   get controlsHint(): string {
@@ -241,8 +299,17 @@ export class HackOS {
     else if (this.mode === "launcher") drawLauncher(ctx, theme, this.apps, this.selected);
     else if (this.game) {
       this.game.draw(ctx, theme);
-      if (this.game.over) drawOverlay(ctx, theme, "Game over", `Score ${this.game.score}`, "OK play again  ·  BACK menu");
-      else if (this.paused) drawOverlay(ctx, theme, "Paused", this.game.title, "OK resume  ·  AC restart  ·  BACK menu");
+      if (this.game.over && this.recorded) {
+        const best = getBest(this.game.id);
+        drawOverlay(
+          ctx,
+          theme,
+          this.newBest ? "New best!" : "Game over",
+          this.newBest ? `Score ${this.game.score}` : `Score ${this.game.score}  ·  Best ${best}`,
+          "OK play again  ·  BACK menu",
+        );
+      } else if (this.paused) drawOverlay(ctx, theme, "Paused", this.game.title, "OK resume  ·  AC restart  ·  BACK menu");
+      else if (this.intro > 0) drawIntro(ctx, theme, this.intro);
     }
     if (this.toast) {
       ctx.font = `600 9px ${theme.font}`;
@@ -454,5 +521,22 @@ function drawOverlay(ctx: CanvasRenderingContext2D, t: ScreenTheme, title: strin
   ctx.fillStyle = "#b9bdb2";
   ctx.font = `500 7.5px ${t.font}`;
   ctx.fillText(hint, SCREEN_W / 2, y + 60);
+  ctx.textAlign = "left";
+}
+
+function drawIntro(ctx: CanvasRenderingContext2D, t: ScreenTheme, left: number) {
+  const go = left < INTRO_MS * 0.35;
+  const phase = go ? left / (INTRO_MS * 0.35) : (left - INTRO_MS * 0.35) / (INTRO_MS * 0.65);
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
+  const scale = go ? 1 + (1 - phase) * 0.6 : 1 + phase * 0.15;
+  ctx.globalAlpha = go ? Math.min(1, phase * 2) : 1;
+  ctx.textAlign = "center";
+  ctx.font = `900 ${Math.round(22 * scale)}px ${t.font}`;
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fillText(go ? "GO!" : "READY", SCREEN_W / 2 + 1, SCREEN_H / 2 + 9);
+  ctx.fillStyle = go ? t.accent : "#ffffff";
+  ctx.fillText(go ? "GO!" : "READY", SCREEN_W / 2, SCREEN_H / 2 + 8);
+  ctx.globalAlpha = 1;
   ctx.textAlign = "left";
 }

@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { DEMO_UNLOCK_SEQUENCE, HackOS } from "./os";
+import { beforeEach, describe, expect, it } from "vitest";
+import { getBest, resetBests } from "./bests";
+import type { Tetris } from "./games/tetris";
+import { DEMO_UNLOCK_SEQUENCE, HackOS, INTRO_MS } from "./os";
+
+beforeEach(() => resetBests());
 
 describe("Hackulator OS (web demo)", () => {
   it("starts as a calculator and calculates", () => {
@@ -41,6 +45,65 @@ describe("Hackulator OS (web demo)", () => {
     }
     os.press("HOME");
     expect(os.mode).toBe("calc");
+  });
+
+  it("holds each game still during READY / GO", () => {
+    const os = new HackOS({ startIn: "launcher" });
+    os.selected = 0; // Snake
+    os.press("OK");
+    const head = JSON.stringify(os.game);
+    os.tick(INTRO_MS - 100);
+    expect(JSON.stringify(os.game)).toBe(head);
+    expect(os.intro).toBeGreaterThan(0);
+    os.tick(200);
+    os.tick(400);
+    expect(JSON.stringify(os.game)).not.toBe(head);
+  });
+
+  it("uses = / EXE as hard drop in Tetris but as pause elsewhere", () => {
+    const os = new HackOS({ startIn: "launcher" });
+    os.selected = 2;
+    os.press("OK");
+    os.tick(INTRO_MS + 1);
+    const t = os.game as Tetris;
+    const before = t.score;
+    os.press("EXE");
+    expect(os.paused).toBe(false);
+    expect(t.score).toBeGreaterThan(before);
+    os.press("BACK");
+    os.selected = 1;
+    os.press("OK");
+    os.tick(INTRO_MS + 1);
+    os.press("EXE");
+    expect(os.paused).toBe(true);
+  });
+
+  it("maps swipes and taps on the screen", () => {
+    const os = new HackOS({ startIn: "launcher" });
+    os.swipe("RIGHT");
+    expect(os.selected).toBe(1);
+    os.tap();
+    expect(os.mode).toBe("game");
+    expect(os.game?.id).toBe("2048");
+  });
+
+  it("records a best score when a game ends", () => {
+    const os = new HackOS({ startIn: "launcher" });
+    os.selected = 0;
+    os.press("OK");
+    os.tick(INTRO_MS + 1);
+    const g = os.game!;
+    g.score = 7;
+    g.over = true;
+    os.tick(16);
+    expect(getBest("snake")).toBe(7);
+    expect(os.newBest).toBe(true);
+    os.press("OK"); // too soon: the result stays up
+    expect(os.game?.over).toBe(true);
+    os.tick(700);
+    os.press("OK"); // play again
+    expect(os.game?.over).toBe(false);
+    expect(os.newBest).toBe(false);
   });
 
   it("does not open apps without a web demo", () => {
