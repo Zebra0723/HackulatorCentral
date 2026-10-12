@@ -3,5 +3,6 @@ export const NAV_LINKS = [
   { href: "#inside", label: "Inside" },
   { href: "#games", label: "Games" },
   { href: "#build", label: "Build Yours" },
+  { href: "#waitlist", label: "Waitlist" },
   { href: "#faq", label: "FAQ" },
 ] as const;

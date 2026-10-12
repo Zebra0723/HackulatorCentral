@@ -572,7 +572,8 @@ export async function dashboard(db: Db) {
       (select count(*)::int from orders where not archived and status in ('accepted','building','waiting_calculator','waiting_parts')) as active_builds,
       (select count(*)::int from orders where not archived and status = 'waiting_deposit') as waiting_deposit,
       (select count(*)::int from orders where not archived and status = 'testing') as testing,
-      (select count(*)::int from orders where not archived and status = 'ready') as ready`,
+      (select count(*)::int from orders where not archived and status = 'ready') as ready,
+      (select count(*)::int from waitlist where status <> 'withdrawn') as waitlist_taken`,
   );
   return counts;
 }

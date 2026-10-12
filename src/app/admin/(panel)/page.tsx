@@ -3,6 +3,7 @@ import { fmtDateTime } from "@/components/admin/fmt";
 import { recentAudit } from "@/lib/server/audit";
 import { requireAdminPage } from "@/lib/server/http";
 import { dashboard, listOrders, statusLabel } from "@/lib/server/orders";
+import { getSettings } from "@/lib/server/settings";
 
 const ACTION_TEXT: Record<string, string> = {
   "order.create": "Order created",
@@ -28,6 +29,11 @@ const ACTION_TEXT: Record<string, string> = {
   "release.create": "Release added",
   "release.update": "Release edited",
   export: "Data exported",
+  "waitlist.add": "Waitlist: person added",
+  "waitlist.update": "Waitlist: entry edited",
+  "waitlist.move": "Waitlist: order changed",
+  "waitlist.delete": "Waitlist: entry removed",
+  "settings.update": "Site settings changed",
 };
 
 export default async function AdminHome() {
@@ -35,8 +41,10 @@ export default async function AdminHome() {
   const c = await dashboard(db);
   const active = (await listOrders(db, "active")).slice(0, 6);
   const changes = await recentAudit(db, 12);
+  const settings = await getSettings(db);
   const tiles = [
     { label: "New enquiries", n: c.new_enquiries, href: "/admin/enquiries" },
+    { label: `Waitlist (of ${settings.waitlistSpots})`, n: c.waitlist_taken, href: "/admin/waitlist" },
     { label: "Active builds", n: c.active_builds, href: "/admin/orders" },
     { label: "Waiting for deposit", n: c.waiting_deposit, href: "/admin/orders?status=waiting_deposit" },
     { label: "Need testing", n: c.testing, href: "/admin/orders?status=testing" },

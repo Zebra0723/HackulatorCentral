@@ -209,6 +209,8 @@ export async function exportAll(db: Db) {
     devices: await q("select * from devices order by id"),
     serviceRecords: await q("select * from service_records order by id"),
     releases: await q("select * from software_releases order by id"),
+    waitlist: await q("select * from waitlist order by position"),
+    siteSettings: await q("select * from site_settings order by key"),
     auditLog: await q("select * from audit_log order by id"),
   };
 }

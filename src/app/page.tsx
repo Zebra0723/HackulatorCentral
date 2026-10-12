@@ -12,8 +12,11 @@ import { InteractiveHackulator } from "@/components/device/InteractiveHackulator
 import { StaticLauncher } from "@/components/device/StaticLauncher";
 import { FillText, Marquee, ScrollFx } from "@/components/scroll/ScrollFx";
 import { MockupTag } from "@/components/MockupNotice";
+import { Waitlist } from "@/components/Waitlist";
 import { loadCatalogue } from "@/lib/server/catalogue";
-import { dbMode } from "@/lib/server/db";
+import { dbMode, getDb } from "@/lib/server/db";
+import { DEFAULT_SETTINGS, getSettings } from "@/lib/server/settings";
+import { waitlistSummary, type WaitlistSummary } from "@/lib/server/waitlist";
 
 const INSIDE = [
   {
@@ -48,11 +51,26 @@ function Chapter({ n, label }: { n: string; label: string }) {
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const { conceptFilm, contact, availability, fulfilmentTerms } = siteConfig;
+  const { conceptFilm, contact } = siteConfig;
   const { catalogue } = await loadCatalogue();
   const packs = [...catalogue.packs].sort((a, b) => a.sort - b.sort);
   const singlePrices = Array.from(new Set(catalogue.games.filter(isGameBuyable).map((g) => g.pricePence!)));
-  const onlineSubmissions = dbMode() !== "none";
+  // Owner-editable settings and waitlist counts. If the database is unreachable the page still renders with defaults.
+  let settings = { ...DEFAULT_SETTINGS };
+  let wl: WaitlistSummary = { spots: settings.waitlistSpots, taken: 0, left: settings.waitlistSpots, open: settings.waitlistOpen };
+  let dbReady = false;
+  try {
+    const db = await getDb();
+    if (db) {
+      settings = await getSettings(db);
+      wl = await waitlistSummary(db);
+      dbReady = true;
+    }
+  } catch (e) {
+    console.error("Settings unavailable; using defaults.", e);
+  }
+  const onlineSubmissions = dbMode() !== "none" && dbReady && settings.enquiriesOpen;
+  const basePrice = settings.basePricePence == null ? null : formatPence(settings.basePricePence);
   const baseGames = catalogue.games.filter((g) => g.base).map((g) => g.name);
   const stats = [
     { value: String(baseGames.length), label: "games included", sub: baseGames.join(", ") },
@@ -66,6 +84,12 @@ export default async function Home() {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
+      {settings.announcementOn && settings.announcementText && (
+        <div className="announce" role="status">
+          <span className="announce__dot" aria-hidden="true" />
+          {settings.announcementText}
+        </div>
+      )}
       <SiteHeader />
       <ScrollFx />
 
@@ -78,10 +102,17 @@ export default async function Home() {
           </div>
           <div className="container hero__grid">
             <div className="hero__copy">
-              <span className="status-pill">
-                <span className="status-pill__dot" aria-hidden="true" />
-                In development · prototype project
-              </span>
+              <div className="hero__pills">
+                <span className="status-pill">
+                  <span className="status-pill__dot" aria-hidden="true" />
+                  {settings.statusLabel}
+                </span>
+                {wl.open && wl.left > 0 && (
+                  <a className="hero__wl" href="#waitlist">
+                    <span aria-hidden="true">🔥</span> {wl.left} of {wl.spots} waitlist spots left · Join free
+                  </a>
+                )}
+              </div>
               <Logo priority className="hero__logo" alt="Hackulator" />
               <h1 className="display hero__title" id="hero-title">
                 <span className="hero__line">A calculator.</span>{" "}
@@ -120,7 +151,7 @@ export default async function Home() {
         </section>
 
         <Marquee
-          items={["Snake", "2048", "Tetris", "Colour display", "Same familiar keys", "Custom UI", "Your name on the cover"]}
+          items={["Snake", "2048", "Tetris", "Colour display", "Same familiar keys", "Custom UI", "Your name on the cover", `Only ${wl.spots} waitlist spots`]}
         />
 
         {/* Overview */}
@@ -306,7 +337,18 @@ export default async function Home() {
                 it&apos;s announced.
               </p>
             </div>
-            <Configurator catalogue={catalogue} onlineSubmissions={onlineSubmissions} email={contact.email} />
+            <Configurator catalogue={catalogue} onlineSubmissions={onlineSubmissions} email={contact.email} basePrice={basePrice} />
+          </div>
+        </section>
+
+        {/* Waitlist */}
+        <section className="section waitlist-section" id="waitlist" aria-labelledby="waitlist-title">
+          <div className="waitlist-section__glow" aria-hidden="true" />
+          <div className="container">
+            <Chapter n="05" label="Waitlist" />
+            <div data-reveal>
+              <Waitlist spots={wl.spots} taken={wl.taken} open={wl.open} available={dbReady} email={contact.email} />
+            </div>
           </div>
         </section>
 
@@ -314,7 +356,7 @@ export default async function Home() {
         <section className="section section--tight" id="lifetime" aria-labelledby="lifetime-title">
           <div className="container">
             <div className="section-head" data-reveal>
-              <Chapter n="05" label="Lifetime options" />
+              <Chapter n="06" label="Lifetime options" />
               <h2 className="h2" id="lifetime-title">
                 Pay once. Plainly.
               </h2>
@@ -331,7 +373,7 @@ export default async function Home() {
         <section className="section section--alt" id="faq" aria-labelledby="faq-title">
           <div className="container">
             <div className="section-head" data-reveal>
-              <Chapter n="06" label="FAQ" />
+              <Chapter n="07" label="FAQ" />
               <h2 className="h2" id="faq-title">
                 Questions, answered.
               </h2>
@@ -344,7 +386,7 @@ export default async function Home() {
         <section className="section dark" id="enquire" aria-labelledby="enquire-title">
           <div className="container enquire">
             <div data-reveal>
-              <Chapter n="07" label="Enquiries" />
+              <Chapter n="08" label="Enquiries" />
               <h2 className="h2" id="enquire-title">
                 Follow the build.
               </h2>
@@ -369,23 +411,27 @@ export default async function Home() {
               <ul className="kv">
                 <li>
                   <span>Stage</span>
-                  <span>Prototype in development</span>
+                  <span>{settings.stageText}</span>
                 </li>
                 <li>
                   <span>Base price</span>
-                  <span>To be confirmed</span>
+                  <span>{basePrice ?? "To be confirmed"}</span>
                 </li>
                 <li>
                   <span>Availability</span>
-                  <span>{availability ?? "Not yet available"}</span>
+                  <span>{settings.availabilityText || "Not yet available"}</span>
                 </li>
                 <li>
                   <span>Fulfilment terms</span>
-                  <span>{fulfilmentTerms ?? "To be published"}</span>
+                  <span>{settings.fulfilmentText || "To be published"}</span>
                 </li>
                 <li>
                   <span>Enquiries</span>
                   <span>{contact.email ? "Open" : "Not yet open"}</span>
+                </li>
+                <li>
+                  <span>Waitlist</span>
+                  <span>{wl.open ? `${wl.left} of ${wl.spots} spots left` : "Closed"}</span>
                 </li>
               </ul>
             </div>

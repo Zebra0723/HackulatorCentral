@@ -25,11 +25,18 @@ Website, build configurator, private order tracking and owner control room for *
    - an estimate, only if you set one
 
    Internal notes, emails and other customers' data never appear. Order numbers alone give no access.
-4. **Owner control room** at `/admin`, with password login and server-side checks on every action:
+4. **Waitlist** (homepage section 05, plus a chip in the hero).
+   - Shows live "X of N spots left" with a spot grid; there are 10 spots by default.
+   - People join with their name, email, an optional dream build and a consent tick.
+   - Joining is free with no obligation to buy; it only reserves a place in the manufacturing queue.
+   - Nothing is emailed automatically. When the list is full or closed, the form becomes an email link.
+5. **Owner control room** at `/admin`, with password login and server-side checks on every action:
    - dashboard
    - orders and the tracking editor
    - enquiries
    - catalogue
+   - **waitlist**: change the number of spots, open or close it, add, edit, reorder, withdraw or remove people, and email everyone holding a spot
+   - **site settings**: the announcement bar, the hero status pill, the stage, base price, availability and fulfilment text on the status card, and switching online order requests on or off
    - devices and service records
    - software releases
    - build sheets
@@ -74,6 +81,8 @@ The site needs a Postgres database for enquiries, tracking and the control room.
 If `DATABASE_URL` is missing in production, the public site still works. Online requests then say they aren't switched on (the email link remains), and `/admin` explains that no database is connected. Nothing falls back to browser storage or pretends to work.
 
 **Missing setup values:** just `DATABASE_URL`. See `.env.example`.
+
+**Calculator shortcut:** typing **0 7 2 3 2 0 1 5** on the virtual calculator opens `/admin`. It is only a shortcut: the sign-in page still needs your email and password, and the digits are visible in the site's code, so don't treat them as a secret.
 
 ## Your first admin account
 
@@ -129,16 +138,16 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
 
 ## Tests
 
-`npm test` runs **88 tests** in 7 files, all passing:
+`npm test` runs **91 tests** in 7 files, all passing:
 
 - **Pricing (25):** every required example, plus no double charges, tier switching keeping cover choices, the Arcade Pack's third game staying “to be announced”, gold surcharges, share links never carrying personal text, and sanitising untrusted input.
-- **Calculator, games and OS (39):** 17 parser + 14 game + 8 OS tests covering:
+- **Calculator, games and OS (40):** 17 parser + 14 game + 9 OS tests covering:
   - the arithmetic parser with no `eval`, and the demo unlock
   - Snake: wrapping through walls, ending only on self-collision, speeding up, golden apples
   - 2048: merging and tracked slides for the animations
   - Tetris: line clears, the 7-piece bag, hard drop and lock delay
-  - the OS: READY/GO, = as hard drop only in Tetris, swipe/tap, best scores, and pause / restart / return
-- **Backend on a real in-memory Postgres (13):**
+  - the OS: READY/GO, = as hard drop only in Tetris, swipe/tap, best scores, pause / restart / return, and the 07232015 control-room shortcut
+- **Backend on a real in-memory Postgres (15):**
   - login and rate limits; only password hashes are stored
   - server-side pricing of enquiries
   - the £5 deposit rule (including deposit and stage in one save), with covered software jobs exempt
@@ -148,6 +157,8 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
   - catalogue edits propagate without changing accepted orders
   - covered service work can't be charged
   - the export contains no secrets
+  - waitlist: fills in order, refuses when full or closed, no duplicate emails, reordering, withdrawing frees a spot, owner edits
+  - site settings are validated, trimmed and fall back to defaults
 - **Components (11):** 9 configurator tests covering flows, honest “not submitted” messaging and real submission, plus 2 film stage tests.
 
 Also run against the production build in Chromium: an end-to-end walkthrough of all four features on desktop and phone sizes, plus unauthenticated-access checks (401/307/403), privacy headers, keyboard and touch use, reduced motion, and no horizontal scrolling. The results are in the commit/PR notes.

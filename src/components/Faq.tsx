@@ -87,6 +87,21 @@ const ITEMS: { q: string; a: React.ReactNode }[] = [
     ),
   },
   {
+    q: "What does joining the waitlist mean?",
+    a: (
+      <>
+        <p>
+          Joining is free and there&apos;s no obligation to buy. It simply reserves your place in the manufacturing
+          queue for the first small batch, in the order people joined.
+        </p>
+        <p>
+          When your spot comes up, we&apos;ll contact you personally with the price and details, and you decide then.
+          Nothing is ever charged on this website, and you can leave the list any time by emailing us.
+        </p>
+      </>
+    ),
+  },
+  {
     q: "Is the Arcade Pack available?",
     a: (
       <p>

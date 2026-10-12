@@ -8,6 +8,8 @@ const auth = await import("./auth");
 const cat = await import("./catalogue");
 const orders = await import("./orders");
 const devices = await import("./devices");
+const settingsMod = await import("./settings");
+const waitlist = await import("./waitlist");
 const { EMPTY_BUILD } = await import("@/lib/pricing");
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -211,5 +213,52 @@ describe("devices and service records", () => {
     expect(data).not.toContain("password_hash");
     expect(data).not.toContain("scrypt$");
     expect(data).toContain("ORD-");
+  });
+});
+
+describe("waitlist and site settings", () => {
+  it("fills the spots in order, refuses when full and frees a spot when someone withdraws", async () => {
+    await settingsMod.saveSettings(db, ME, { waitlistSpots: 2 });
+    const join = (n: string, extra: Record<string, unknown> = {}) =>
+      waitlist.joinWaitlist(db, { name: n, email: `${n.toLowerCase()}@example.com`, consent: true, ...extra });
+
+    await expect(waitlist.joinWaitlist(db, { name: "No", email: "no@example.com" })).rejects.toThrow(/tick the box/);
+    const a = await join("Ada");
+    expect(a).toMatchObject({ already: false, queueNumber: 1, summary: { spots: 2, taken: 1, left: 1 } });
+    // The same email again: friendly answer, no duplicate, no details revealed.
+    const again = await join("Someone", { email: "ADA@example.com" });
+    expect(again).toMatchObject({ already: true, queueNumber: null });
+    const b = await join("Bo");
+    expect(b.queueNumber).toBe(2);
+    await expect(join("Cy")).rejects.toThrow(/Every spot/);
+
+    const rows = await waitlist.listWaitlist(db);
+    expect(rows.map((r) => r.name)).toEqual(["Ada", "Bo"]);
+    await waitlist.moveWaitlistEntry(db, ME, rows[1].id, "up");
+    expect((await waitlist.listWaitlist(db)).map((r) => [r.name, r.queue_number])).toEqual([["Bo", 1], ["Ada", 2]]);
+
+    await waitlist.updateWaitlistEntry(db, ME, rows[0].id, { status: "withdrawn", privateNote: "changed mind" });
+    expect((await waitlist.waitlistSummary(db)).left).toBe(1);
+    expect((await join("Cy")).queueNumber).toBe(2);
+
+    // The owner can raise the number of spots, close the list and edit entries.
+    await settingsMod.saveSettings(db, ME, { waitlistSpots: 10, waitlistOpen: false });
+    await expect(join("Di")).rejects.toThrow(/closed/);
+    await expect(waitlist.updateWaitlistEntry(db, ME, rows[1].id, { email: "cy@example.com" })).rejects.toThrow(/already on the waitlist/);
+    const id = await waitlist.addWaitlistEntry(db, ME, { name: "Eve", email: "eve@example.com" });
+    await waitlist.deleteWaitlistEntry(db, ME, id);
+    expect((await waitlist.waitlistSummary(db))).toMatchObject({ spots: 10, taken: 2, left: 8, open: false });
+  });
+
+  it("validates settings and keeps defaults for anything unset", async () => {
+    await expect(settingsMod.saveSettings(db, ME, { waitlistSpots: -1 })).rejects.toThrow(/whole number/);
+    await expect(settingsMod.saveSettings(db, ME, { announcementOn: true, announcementText: "" })).rejects.toThrow(/announcement text/);
+    const s = await settingsMod.saveSettings(db, ME, { announcementOn: true, announcementText: "  Prototype 2 is on the bench!\n ", basePricePence: 4999, ignored: "x" });
+    expect(s).toMatchObject({ announcementOn: true, announcementText: "Prototype 2 is on the bench!", basePricePence: 4999, statusLabel: settingsMod.DEFAULT_SETTINGS.statusLabel });
+    expect(s).not.toHaveProperty("ignored");
+    expect((await settingsMod.saveSettings(db, ME, { basePricePence: null })).basePricePence).toBeNull();
+    const exp = await devices.exportAll(db);
+    expect(exp.waitlist.length).toBeGreaterThan(0);
+    expect(exp.siteSettings.length).toBeGreaterThan(0);
   });
 });

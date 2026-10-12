@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useRouter } from "next/navigation";
 import { DEFAULT_UI } from "@/lib/pricing";
 import { keyFromKeyboard, type HKey } from "@/lib/hackos/keys";
 import { DEMO_UNLOCK_SEQUENCE, HackOS } from "@/lib/hackos/os";
@@ -18,6 +19,7 @@ const CAPTURED = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "
 
 export function InteractiveHackulator() {
   const [os] = useState(() => new HackOS());
+  const router = useRouter();
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const [visible, setVisible] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
@@ -28,6 +30,16 @@ export function InteractiveHackulator() {
   const theme = useMemo(() => themeFromUi(DEFAULT_UI), []);
 
   useEffect(() => os.subscribe(rerender), [os]);
+  // Owner shortcut typed on the calculator: go to the control room (which still asks for a password).
+  useEffect(
+    () =>
+      os.subscribe(() => {
+        if (!os.adminRequested) return;
+        os.adminRequested = false;
+        window.setTimeout(() => router.push("/admin"), 450);
+      }),
+    [os, router],
+  );
 
   // Only run while on screen and the tab is visible; pause games otherwise.
   useEffect(() => {

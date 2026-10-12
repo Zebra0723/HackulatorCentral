@@ -672,3 +672,59 @@ a.a-row:hover {
     padding: 0;
   }
 }
+
+/* waitlist */
+.a-wl-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.a-wl {
+  display: grid;
+  gap: 10px;
+}
+.a-wl--withdrawn {
+  opacity: 0.6;
+}
+.a-wl__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.a-wl__num {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #b4e23c;
+  color: #1c2606;
+  font-weight: 800;
+}
+.a-wl--withdrawn .a-wl__num {
+  background: var(--paper-2);
+  color: var(--muted);
+}
+.a-wl__main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.a-status--wl-waiting {
+  background: #eef7d6;
+  border-color: #c9e48a;
+}
+.a-status--wl-contacted {
+  background: #e3effc;
+  border-color: #b7d3f3;
+}
+.a-status--wl-converted {
+  background: #e7f6e9;
+  border-color: #a9dbb0;
+}
+.a-fieldset legend {
+  font-weight: 700;
+  padding: 0 4px;
+}

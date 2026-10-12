@@ -7,9 +7,11 @@ const LINKS = [
   { href: "/admin", label: "Home" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/enquiries", label: "Enquiries" },
+  { href: "/admin/waitlist", label: "Waitlist" },
   { href: "/admin/catalogue", label: "Catalogue" },
   { href: "/admin/devices", label: "Devices" },
   { href: "/admin/releases", label: "Releases" },
+  { href: "/admin/settings", label: "Settings" },
 ];
 
 export function AdminNav() {

@@ -182,6 +182,26 @@ create table if not exists audit_log (
   detail jsonb
 );
 create index if not exists audit_log_at_idx on audit_log(at desc);
+
+create table if not exists site_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists waitlist (
+  id serial primary key,
+  position int not null,
+  name text not null,
+  email text not null,
+  note text not null default '',
+  private_note text not null default '',
+  status text not null default 'waiting' check (status in ('waiting','contacted','converted','withdrawn')),
+  source text not null default 'website',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists waitlist_email_idx on waitlist (lower(email));
 `;
 
 /** Insert the default catalogue the first time only. Later edits happen in the admin area. */

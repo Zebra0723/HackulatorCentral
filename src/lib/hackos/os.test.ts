@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { getBest, resetBests } from "./bests";
 import type { Tetris } from "./games/tetris";
-import { DEMO_UNLOCK_SEQUENCE, HackOS, INTRO_MS } from "./os";
+import { ADMIN_SHORTCUT_SEQUENCE, DEMO_UNLOCK_SEQUENCE, HackOS, INTRO_MS } from "./os";
 
 beforeEach(() => resetBests());
 
@@ -104,6 +104,20 @@ describe("Hackulator OS (web demo)", () => {
     os.press("OK"); // play again
     expect(os.game?.over).toBe(false);
     expect(os.newBest).toBe(false);
+  });
+
+  it("asks to open the control room when the owner shortcut is typed", () => {
+    const os = new HackOS();
+    for (const k of ["1", "ADD", "1"] as const) os.press(k);
+    for (const k of ADMIN_SHORTCUT_SEQUENCE) os.press(k);
+    expect(os.adminRequested).toBe(true);
+    expect(os.mode).toBe("calc");
+    expect(os.expr).toBe("");
+    // a near miss does nothing
+    const other = new HackOS();
+    for (const k of ["0", "7", "2", "3", "2", "0", "1", "6"] as const) other.press(k);
+    expect(other.adminRequested).toBe(false);
+    expect(other.expr).toBe("07232016");
   });
 
   it("does not open apps without a web demo", () => {

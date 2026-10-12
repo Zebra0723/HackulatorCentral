@@ -80,11 +80,14 @@ export function Configurator({
   catalogue,
   onlineSubmissions,
   email,
+  basePrice = null,
 }: {
   catalogue: Catalogue;
   /** True only when a database is configured and enquiries are actually stored. */
   onlineSubmissions: boolean;
   email?: string;
+  /** Formatted base price once the owner has set one; otherwise "to be confirmed". */
+  basePrice?: string | null;
 }) {
   const reducer = useMemo(() => makeBuildReducer(catalogue), [catalogue]);
   const [build, dispatch] = useReducer(reducer, EMPTY_BUILD);
@@ -237,7 +240,7 @@ export function Configurator({
             </div>
             <div className="summary__base">
               <span>Base price</span>
-              <span>To be confirmed</span>
+              <span>{basePrice ?? "To be confirmed"}</span>
             </div>
             {q.issues.length > 0 && (
               <div className="summary__issues" role="status">

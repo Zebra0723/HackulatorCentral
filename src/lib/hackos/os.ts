@@ -28,6 +28,13 @@ export const DEMO_GAMES: readonly LauncherApp[] = [
   { id: "tetris", name: "Tetris", playable: true },
 ];
 
+/**
+ * Owner shortcut: typing these digits on the calculator opens the control room's
+ * sign-in page. It is only a shortcut. The page still needs the owner's email and
+ * password, and the digits are visible in the site's code, so it is not a secret.
+ */
+export const ADMIN_SHORTCUT_SEQUENCE: readonly HKey[] = ["0", "7", "2", "3", "2", "0", "1", "5"];
+
 type Mode = "calc" | "launcher" | "game";
 type Arrow = "UP" | "DOWN" | "LEFT" | "RIGHT";
 
@@ -66,6 +73,9 @@ export class HackOS {
   ans = 0;
   justEvaluated = false;
   private seq: HKey[] = [];
+  private adminSeq: HKey[] = [];
+  /** Set when the owner shortcut was typed; the page then navigates to /admin. */
+  adminRequested = false;
   private clock = 0;
   private listeners = new Set<() => void>();
 
@@ -203,7 +213,24 @@ export class HackOS {
     return false;
   }
 
+  private trackAdminShortcut(k: HKey) {
+    this.adminSeq.push(k);
+    if (this.adminSeq.length > ADMIN_SHORTCUT_SEQUENCE.length) this.adminSeq.shift();
+    if (this.adminSeq.length === ADMIN_SHORTCUT_SEQUENCE.length && this.adminSeq.every((s, i) => s === ADMIN_SHORTCUT_SEQUENCE[i])) {
+      this.adminSeq = [];
+      this.expr = "";
+      this.result = "";
+      this.justEvaluated = false;
+      this.adminRequested = true;
+      this.flash("Opening control room…", 3000);
+      this.changed();
+      return true;
+    }
+    return false;
+  }
+
   private calcKey(k: HKey) {
+    if (this.trackAdminShortcut(k)) return;
     if (this.trackSequence(k)) return;
     if (k === "HOME" || k === "OK") return; // part of the demo sequence; no calculator meaning here
     if (k === "AC") {
