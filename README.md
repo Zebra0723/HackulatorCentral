@@ -30,7 +30,7 @@ Website, build configurator, private order tracking and owner control room for *
    - People join with their name, email, an optional dream build and a consent tick.
    - Joining is free with no obligation to buy; it only reserves a place in the manufacturing queue.
    - Nothing is emailed automatically. When the list is full or closed, the form becomes an email link.
-5. **Owner control room** at `/admin`, with password login and server-side checks on every action:
+5. **Owner control room** at `/admin`. Type the owner code on the calculator to open it; every action is checked on the server:
    - dashboard
    - orders and the tracking editor
    - enquiries
@@ -50,8 +50,7 @@ Needs Node.js 20.9+ (tested on 22) and npm.
 
 ```bash
 npm install
-npm run admin:create -- --email you@example.com   # make your owner account (asks for a password)
-npm run dev                                        # http://localhost:3000  ·  control room: /admin
+npm run dev   # http://localhost:3000  ·  type 07232015 on the calculator to open the control room
 ```
 
 Without `DATABASE_URL`, development uses a **local demo database** (embedded Postgres in `./.data/`, this computer only). The control room shows a yellow “Local demo mode” banner.
@@ -72,21 +71,21 @@ The site needs a Postgres database for enquiries, tracking and the control room.
 
 1. In Vercel, open your project → **Storage** → **Create Database** → **Neon (Postgres)**, and connect it to the project. Vercel adds `DATABASE_URL` for you. Any Postgres 14+ connection string works too: put it in **Settings → Environment Variables** as `DATABASE_URL`.
 2. Deploy. Tables are created automatically on first request (or run `db/schema.sql` yourself).
-3. Create your owner account against the live database from your own computer:
-   ```bash
-   DATABASE_URL="<paste the connection string>" npm run admin:create -- --email you@example.com
-   ```
-4. Sign in at `https://<your-site>/admin`.
+3. Type **07232015** on the calculator on the homepage. It signs you straight into the control room.
 
 If `DATABASE_URL` is missing in production, the public site still works. Online requests then say they aren't switched on (the email link remains), and `/admin` explains that no database is connected. Nothing falls back to browser storage or pretends to work.
 
 **Missing setup values:** just `DATABASE_URL`. See `.env.example`.
 
-**Calculator shortcut:** typing **0 7 2 3 2 0 1 5** on the virtual calculator opens `/admin`. It is only a shortcut: the sign-in page still needs your email and password, and the digits are visible in the site's code, so don't treat them as a secret.
+## Owner sign-in (calculator code)
 
-## Your first admin account
+There are no accounts or passwords. Typing **0 7 2 3 2 0 1 5** on the virtual calculator signs you into the control room for 7 days (**Sign out** ends it).
 
-There is **no sign-up page and no built-in password**. The only way to create an owner account is the command above, run by you with access to the database. Passwords are stored as salted scrypt hashes, and logins are rate-limited. Running the command again for the same email resets that password and signs out its sessions. Use a long, unique password. This website account is **separate** from the public demo sequence (HOME 2 0 4 8 OK) and from any customer's device PIN; never reuse one for another.
+The code is checked on the server. Wrong guesses are limited to 8 per address and 100 site-wide every 15 minutes.
+
+**This was a deliberate choice by the owner.** The code is written in the site's code (`src/lib/hackos/os.ts`) and in this README, so it is **not secret**: anyone who reads them can open the control room and see waitlist and order details. To make it stronger, change `ADMIN_SHORTCUT_SEQUENCE` in `src/lib/hackos/os.ts` to a longer number and redeploy.
+
+The owner code is separate from the public demo sequence (HOME 2 0 4 8 OK) and from any customer's device PIN.
 
 ## How to update a customer's tracking (plain English)
 
@@ -132,13 +131,13 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
 - Prices are recalculated on the server from the live catalogue for every request and order. Whatever the browser sends is ignored.
 - Customer-visible updates and private notes are stored separately; the tracking page reads only the visible ones.
 - Enquiries collect only a name, an email and an optional message. Share links carry option IDs only.
-- **Backup:** Control room → Home → **Download backup** (JSON of all records; excludes passwords, sessions and photo files).
+- **Backup:** Control room → Home → **Download backup** (JSON of all records; excludes sessions and photo files).
 - Website admin access is not part of any customer software pass. No business data or credentials are ever sent to customer devices.
 - **Offline calculator boundary:** device records are maintained by hand; there is no live sync with the calculator's own Order Manager. A future import/export would build on the backup format (`exportAll` in `src/lib/server/devices.ts`).
 
 ## Tests
 
-`npm test` runs **91 tests** in 7 files, all passing:
+`npm test` runs **90 tests** in 7 files, all passing:
 
 - **Pricing (25):** every required example, plus no double charges, tier switching keeping cover choices, the Arcade Pack's third game staying “to be announced”, gold surcharges, share links never carrying personal text, and sanitising untrusted input.
 - **Calculator, games and OS (40):** 17 parser + 14 game + 9 OS tests covering:
@@ -147,8 +146,8 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
   - 2048: merging and tracked slides for the animations
   - Tetris: line clears, the 7-piece bag, hard drop and lock delay
   - the OS: READY/GO, = as hard drop only in Tetris, swipe/tap, best scores, pause / restart / return, and the 07232015 control-room shortcut
-- **Backend on a real in-memory Postgres (15):**
-  - login and rate limits; only password hashes are stored
+- **Backend on a real in-memory Postgres (14):**
+  - owner-code sign-in, rejecting wrong codes and rate-limiting guesses
   - server-side pricing of enquiries
   - the £5 deposit rule (including deposit and stage in one save), with covered software jobs exempt
   - internal notes never shown; revoked and invalid links show nothing; the order number alone gives no access
@@ -165,7 +164,7 @@ Also run against the production build in Chromium: an end-to-end walkthrough of 
 
 ## Still needed from you
 
-1. **A database** (`DATABASE_URL`) and your **owner account** before going live.
+1. **A database** (`DATABASE_URL`) before going live.
 2. **Base price**, stock/availability, business name and fulfilment terms (`src/config/site.ts`); the site shows “to be confirmed” until then.
 3. **Official dark logo** (a provisional derivative is in use).
 4. **Arcade Pack third game** (still “to be announced”).

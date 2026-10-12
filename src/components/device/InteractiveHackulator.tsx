@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type Key
 import { useRouter } from "next/navigation";
 import { DEFAULT_UI } from "@/lib/pricing";
 import { keyFromKeyboard, type HKey } from "@/lib/hackos/keys";
-import { DEMO_UNLOCK_SEQUENCE, HackOS } from "@/lib/hackos/os";
+import { DEMO_UNLOCK_SEQUENCE, HackOS, OWNER_CODE } from "@/lib/hackos/os";
 import { themeFromUi } from "@/lib/hackos/theme";
 import { ArrowIcon } from "../icons";
 import { MockupNotice, MockupTag } from "../MockupNotice";
@@ -30,13 +30,22 @@ export function InteractiveHackulator() {
   const theme = useMemo(() => themeFromUi(DEFAULT_UI), []);
 
   useEffect(() => os.subscribe(rerender), [os]);
-  // Owner shortcut typed on the calculator: go to the control room (which still asks for a password).
+  // Owner code typed on the calculator: sign in on the server, then open the control room.
   useEffect(
     () =>
       os.subscribe(() => {
         if (!os.adminRequested) return;
         os.adminRequested = false;
-        window.setTimeout(() => router.push("/admin"), 450);
+        fetch("/api/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: OWNER_CODE }),
+        })
+          .then((res) => {
+            if (res.ok) router.push("/admin");
+            else os.notify(res.status === 503 ? "Control room needs a database" : "Couldn't open the control room");
+          })
+          .catch(() => os.notify("Couldn't reach the control room"));
       }),
     [os, router],
   );

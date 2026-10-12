@@ -10,7 +10,6 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "admin:create": "tsx --conditions=react-server --tsconfig tsconfig.json scripts/admin-create.ts",
     "db:schema": "tsx --conditions=react-server --tsconfig tsconfig.json scripts/print-schema.ts > db/schema.sql"
   },
   "dependencies": {

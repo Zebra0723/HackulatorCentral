@@ -29,11 +29,12 @@ export const DEMO_GAMES: readonly LauncherApp[] = [
 ];
 
 /**
- * Owner shortcut: typing these digits on the calculator opens the control room's
- * sign-in page. It is only a shortcut. The page still needs the owner's email and
- * password, and the digits are visible in the site's code, so it is not a secret.
+ * Owner code: typing these digits on the calculator signs the owner straight into
+ * the control room (the server checks it and rate-limits wrong guesses). The owner
+ * chose this deliberately; it is visible in the site's code, so it is not a secret.
  */
 export const ADMIN_SHORTCUT_SEQUENCE: readonly HKey[] = ["0", "7", "2", "3", "2", "0", "1", "5"];
+export const OWNER_CODE = ADMIN_SHORTCUT_SEQUENCE.join("");
 
 type Mode = "calc" | "launcher" | "game";
 type Arrow = "UP" | "DOWN" | "LEFT" | "RIGHT";
@@ -100,6 +101,12 @@ export class HackOS {
 
   private flash(text: string, ms = 1600) {
     this.toast = { text, until: this.clock + ms };
+  }
+
+  /** Show a short message on the screen (used by the page, e.g. after the owner code). */
+  notify(text: string) {
+    this.flash(text, 2400);
+    this.changed();
   }
 
   unlock() {

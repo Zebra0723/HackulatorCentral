@@ -11,6 +11,7 @@ const devices = await import("./devices");
 const settingsMod = await import("./settings");
 const waitlist = await import("./waitlist");
 const { EMPTY_BUILD } = await import("@/lib/pricing");
+const { OWNER_CODE } = await import("@/lib/hackos/os");
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 let db: Db;
@@ -23,28 +24,22 @@ beforeAll(async () => {
 
 const classicsBuild = { ...EMPTY_BUILD, packIds: ["classics"] };
 
-describe("admin authentication", () => {
-  it("creates an owner, logs in, rejects wrong passwords and rate-limits", async () => {
-    await expect(auth.createAdmin(db, ME, "short")).rejects.toThrow(/12 characters/);
-    await auth.createAdmin(db, ME, "correct horse battery staple");
-    const ok = await auth.login(db, ME, "correct horse battery staple", "1.1.1.1");
+describe("owner code sign-in", () => {
+  it("signs in with the owner code, rejects wrong codes and rate-limits guessing", async () => {
+    const ok = await auth.loginWithCode(db, OWNER_CODE, "1.1.1.1");
     expect(ok.ok).toBe(true);
     if (!ok.ok) return;
-    expect((await auth.adminFromToken(db, ok.token))?.email).toBe(ME);
+    expect((await auth.adminFromToken(db, ok.token))?.email).toBe("owner");
     expect(await auth.adminFromToken(db, "not-a-real-token")).toBeNull();
-    const bad = await auth.login(db, ME, "wrong password!!", "2.2.2.2");
-    expect(bad.ok).toBe(false);
-    for (let i = 0; i < 8; i++) await auth.login(db, "nobody@example.com", "x", "9.9.9.9");
-    const limited = await auth.login(db, ME, "correct horse battery staple", "9.9.9.9");
+    expect((await auth.loginWithCode(db, "12345678", "2.2.2.2")).ok).toBe(false);
+    for (let i = 0; i < 8; i++) await auth.loginWithCode(db, String(10000000 + i), "9.9.9.9");
+    const limited = await auth.loginWithCode(db, OWNER_CODE, "9.9.9.9");
     expect(limited).toEqual({ ok: false, error: expect.stringMatching(/Too many attempts/) });
+    // A second sign-in reuses the single owner record.
+    const again = await auth.loginWithCode(db, OWNER_CODE, "3.3.3.3");
+    expect(again.ok && again.admin.id).toBe(ok.admin.id);
     await auth.logout(db, ok.token);
     expect(await auth.adminFromToken(db, ok.token)).toBeNull();
-  });
-
-  it("stores only a password hash", async () => {
-    const rows = await db.query<{ password_hash: string }>("select password_hash from admin_users");
-    expect(rows[0].password_hash).toMatch(/^scrypt\$/);
-    expect(rows[0].password_hash).not.toContain("battery");
   });
 });
 
