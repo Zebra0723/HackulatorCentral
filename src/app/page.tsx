@@ -11,6 +11,7 @@ import { DeviceFront } from "@/components/device/DeviceFront";
 import { InteractiveHackulator } from "@/components/device/InteractiveHackulator";
 import { StaticLauncher } from "@/components/device/StaticLauncher";
 import { FillText, Marquee, ScrollFx } from "@/components/scroll/ScrollFx";
+import { MockupTag } from "@/components/MockupNotice";
 import { loadCatalogue } from "@/lib/server/catalogue";
 import { dbMode } from "@/lib/server/db";
 
@@ -126,6 +127,7 @@ export default async function Home() {
         <section className="section section--alt" id="overview" aria-labelledby="overview-title">
           <div className="container overview__grid">
             <div className="overview__visual" data-reveal>
+              <MockupTag />
               <div className="overview__device">
                 <DeviceFront screen={<StaticLauncher />} alt="The Hackulator: a familiar Casio scientific calculator with a colour display showing the games launcher" />
               </div>

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { COVER_ICONS, getCoverColour, type Catalogue } from "@/config/offer";
+import { useState, type ReactNode } from "react";
+import { COVER_ICONS, UI_ACCENTS, UI_FONTS, getCoverColour, type Catalogue } from "@/config/offer";
 import { DEFAULT_UI, ownedGames, uiIncluded, type Build } from "@/lib/pricing";
 import { drawLauncher, type LauncherApp } from "@/lib/hackos/os";
 import { themeFromUi } from "@/lib/hackos/theme";
 import { coverIconArt } from "../CoverIcons";
+import { MockupNotice, MockupTag } from "../MockupNotice";
 import { DeviceFront } from "../device/DeviceFront";
 import { PHOTO } from "../device/keymap";
 import { ScreenCanvas } from "../device/ScreenCanvas";
@@ -23,10 +24,38 @@ function measureText(text: string, font: string): number {
   return measureCtx.measureText(text).width;
 }
 
-const VIEWS: { id: View; label: string }[] = [
-  { id: "front", label: "Front" },
-  { id: "cover", label: "Cover" },
-  { id: "screen", label: "Screen" },
+const VIEWS: { id: View; label: string; icon: ReactNode }[] = [
+  {
+    id: "front",
+    label: "Front",
+    icon: (
+      <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+        <rect x="3.5" y="1.5" width="9" height="13" rx="2" />
+        <rect x="5.5" y="3.5" width="5" height="3" rx="0.6" />
+        <path d="M6 9h.01M8 9h.01M10 9h.01M6 11.5h.01M8 11.5h.01M10 11.5h.01" strokeLinecap="round" strokeWidth="1.8" />
+      </svg>
+    ),
+  },
+  {
+    id: "cover",
+    label: "Cover",
+    icon: (
+      <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+        <rect x="3.5" y="1.5" width="9" height="13" rx="2" />
+        <path d="M8 5.2l.8 1.6 1.7.2-1.3 1.2.3 1.7L8 9.1l-1.5.8.3-1.7-1.3-1.2 1.7-.2z" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+  },
+  {
+    id: "screen",
+    label: "Screen",
+    icon: (
+      <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+        <rect x="1.5" y="4" width="13" height="8" rx="1.5" />
+        <path d="M4 7h3M4 9h5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
 ];
 
 export function BuildPreview({ build, catalogue }: { build: Build; catalogue: Catalogue }) {
@@ -42,6 +71,13 @@ export function BuildPreview({ build, catalogue }: { build: Build; catalogue: Ca
 
   return (
     <section className="preview" aria-label="Live preview of your build">
+      <div className="preview__head">
+        <span className="preview__live">
+          <span className="preview__live-dot" aria-hidden="true" />
+          Live preview
+        </span>
+        <span className="preview__hint">Updates as you choose</span>
+      </div>
       <div className="preview__tabs" role="tablist" aria-label="Preview view">
         {VIEWS.map((v) => (
           <button
@@ -54,11 +90,13 @@ export function BuildPreview({ build, catalogue }: { build: Build; catalogue: Ca
             className="preview__tab"
             onClick={() => setView(v.id)}
           >
+            {v.icon}
             {v.label}
           </button>
         ))}
       </div>
       <div className="preview__panel" id="preview-panel" role="tabpanel" aria-labelledby={`preview-tab-${view}`}>
+        {view !== "cover" && <MockupTag />}
         {view === "front" && (
           <div className="preview__device">
             <DeviceFront
@@ -73,11 +111,21 @@ export function BuildPreview({ build, catalogue }: { build: Build; catalogue: Ca
             <div className="preview__bezel">
               <ScreenCanvas className="preview__screen" draw={drawScreen} label="Home screen preview" />
             </div>
-            {!uiIncluded(build) && <p className="small muted">Standard look shown. Add Custom UI to change it.</p>}
+            <ul className="preview__chips" aria-label="Screen settings shown">
+              <li>
+                <span className="preview__chip-dot" style={{ background: theme.accent }} aria-hidden="true" />
+                {UI_ACCENTS.find((a) => a.id === ui.accent)?.label ?? "Lime"}
+              </li>
+              <li>{UI_FONTS.find((f) => f.id === ui.font)?.label ?? "Clean"} font</li>
+              <li>{ui.appearance === "light" ? "Light" : "Dark"}</li>
+              <li>{ui.layout === "list" ? "List" : "Tiles"}</li>
+            </ul>
+            {!uiIncluded(build) && <p className="preview__std">Standard look shown. Add Custom UI to change it.</p>}
           </div>
         )}
       </div>
-      <p className="preview__note">Preview only. Placement and colours are approximate.</p>
+      <MockupNotice compact />
+      <p className="preview__note">Cover placement and colours are approximate.</p>
     </section>
   );
 }
@@ -111,20 +159,33 @@ function CoverView({ build }: { build: Build }) {
       >
         <defs>
           <linearGradient id="cover-grad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#2c2c2b" />
-            <stop offset="1" stopColor="#161615" />
+            <stop offset="0" stopColor="#30302e" />
+            <stop offset="1" stopColor="#141413" />
+          </linearGradient>
+          <linearGradient id="cover-sheen" x1="0" y1="0" x2="1" y2="0.6">
+            <stop offset="0" stopColor="#ffffff" stopOpacity="0.09" />
+            <stop offset="0.45" stopColor="#ffffff" stopOpacity="0" />
           </linearGradient>
         </defs>
         <rect x="14" y="10" width={W - 28} height={H - 20} rx="54" fill="url(#cover-grad)" />
+        <rect x="14" y="10" width={W - 28} height={H - 20} rx="54" fill="url(#cover-sheen)" />
         <rect x="14.5" y="10.5" width={W - 29} height={H - 21} rx="53.5" fill="none" stroke="#3d3d3b" />
         {/* finger grip ridges at the bottom */}
         {Array.from({ length: 7 }).map((_, i) => (
           <rect key={i} x={W / 2 - 90} y={H - 140 + i * 14} width="180" height="5" rx="2.5" fill="#262625" />
         ))}
         {nothing ? (
-          <text x={W / 2} y={H * 0.42} textAnchor="middle" fill="#7d7c78" fontSize="26" fontFamily="system-ui, sans-serif">
-            Add a name or icon to see it here
-          </text>
+          <g fill="#8d8c87" fontFamily="system-ui, sans-serif" textAnchor="middle">
+            <text x={W / 2} y={H * 0.4} fontSize="46" fontWeight="650">
+              Your cover
+            </text>
+            <text x={W / 2} y={H * 0.4 + 58} fontSize="32">
+              Add a name or icon
+            </text>
+            <text x={W / 2} y={H * 0.4 + 100} fontSize="32">
+              to see it here
+            </text>
+          </g>
         ) : (
           <>
             <rect

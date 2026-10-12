@@ -14,6 +14,7 @@ Website, build configurator, private order tracking and owner control room for *
      - In 2048, tiles slide, merges pop and new tiles grow in.
      - Tetris has fair 7-piece bags, a ghost piece, hard drop (= / EXE), a short lock delay, a 3-piece next queue, line-clear flashes and level-ups.
      - On phones, swipe or tap the screen, and hold the arrow buttons to repeat.
+   - Every screen preview carries a clear yellow **“Simple mockup”** tag and notice: the real Hackulator screen will look much nicer than the web mockup.
 2. **Live Build Yours preview.** FRONT / COVER / SCREEN views. Front shows your games on the launcher. Cover shows the name and icon in your colours inside the printable area. Screen shows your Custom UI: accent, light/dark, welcome text, tiles/list layout and font, all part of the one £5 option. You can save on this device, download a summary, share a link (option IDs only, never the cover name or welcome text) and send an order request or question.
 3. **Follow Your Build.** Private tracking pages at `/track/<secret token>` showing:
    - stage

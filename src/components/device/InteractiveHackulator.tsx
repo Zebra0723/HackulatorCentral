@@ -6,6 +6,7 @@ import { keyFromKeyboard, type HKey } from "@/lib/hackos/keys";
 import { DEMO_UNLOCK_SEQUENCE, HackOS } from "@/lib/hackos/os";
 import { themeFromUi } from "@/lib/hackos/theme";
 import { ArrowIcon } from "../icons";
+import { MockupNotice, MockupTag } from "../MockupNotice";
 import { DeviceFront } from "./DeviceFront";
 import { KEYS, PHOTO, SCREEN_RECT, pct } from "./keymap";
 import { ScreenCanvas } from "./ScreenCanvas";
@@ -126,6 +127,7 @@ export function InteractiveHackulator() {
   return (
     <div className="demo">
       <div className="demo__stage">
+        <MockupTag />
         <div
           ref={wrapRef}
           className="demo__device"
@@ -199,6 +201,7 @@ export function InteractiveHackulator() {
 
       <div className="demo__panel">
         <span className="tag">Interactive web demo</span>
+        <MockupNotice tone="dark" />
         <p className={`demo__mode demo__mode--${os.mode}`} aria-live="polite">
           <span className="demo__mode-dot" aria-hidden="true" />
           {os.mode === "calc" ? "Calculator mode" : os.mode === "launcher" ? "Launcher" : `${os.game?.title}${os.paused ? " · paused" : ""}`}
