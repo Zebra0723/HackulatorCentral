@@ -1,6 +1,7 @@
 import "server-only";
 import { DEFAULT_CATALOGUE } from "@/config/offer";
 import type { Db } from "./db";
+import { newWaitlistCode } from "./waitlist-code";
 
 /**
  * Database schema. Idempotent: safe to run on every start. The same SQL is
@@ -202,6 +203,9 @@ create table if not exists waitlist (
   updated_at timestamptz not null default now()
 );
 create unique index if not exists waitlist_email_idx on waitlist (lower(email));
+alter table waitlist add column if not exists code text;
+create unique index if not exists waitlist_code_idx on waitlist (code);
+alter table enquiries add column if not exists waitlist_id int references waitlist(id) on delete set null;
 `;
 
 /** Insert the default catalogue the first time only. Later edits happen in the admin area. */
@@ -226,4 +230,12 @@ export async function seedCatalogue(db: Db) {
       }
     }
   });
+}
+
+/** Give every waitlist entry an ID (entries from before IDs existed get one now). */
+export async function backfillWaitlistCodes(db: Db) {
+  const rows = await db.query<{ id: number }>("select id from waitlist where code is null");
+  for (const r of rows) {
+    await db.query("update waitlist set code = $2 where id = $1 and code is null", [r.id, newWaitlistCode()]);
+  }
 }

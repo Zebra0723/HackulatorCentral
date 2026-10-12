@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { WAITLIST_ID_KEY } from "@/lib/waitlist-id";
 
 type State =
   | { kind: "idle" }
   | { kind: "sending" }
-  | { kind: "done"; queueNumber: number | null; already: boolean }
+  | { kind: "done"; queueNumber: number | null; already: boolean; waitlistId: string | null }
   | { kind: "error"; message: string };
 
 const PROMISES = ["Free to join", "No obligation to buy", "Reserves your place in the build queue", "Leave any time"];
@@ -54,11 +55,20 @@ export function Waitlist({
         error?: string;
         queueNumber?: number | null;
         already?: boolean;
+        waitlistId?: string | null;
         summary?: { taken: number };
       };
       if (!res.ok) return setState({ kind: "error", message: data.error ?? "Something went wrong. Nothing was saved." });
       if (data.summary) setTaken(data.summary.taken);
-      setState({ kind: "done", queueNumber: data.queueNumber ?? null, already: Boolean(data.already) });
+      const waitlistId = data.waitlistId ?? null;
+      if (waitlistId) {
+        try {
+          localStorage.setItem(WAITLIST_ID_KEY, waitlistId);
+        } catch {
+          /* storage blocked: the ID is still shown on screen */
+        }
+      }
+      setState({ kind: "done", queueNumber: data.queueNumber ?? null, already: Boolean(data.already), waitlistId });
     } catch {
       setState({ kind: "error", message: "Couldn't reach the server. Nothing was saved." });
     }
@@ -125,6 +135,10 @@ export function Waitlist({
               <>
                 <h3>You&apos;re already on the list!</h3>
                 <p>Your spot is safe. We&apos;ll be in touch when it comes up.</p>
+                <p className="wl__fine">
+                  Use the waitlist ID you got when you first joined to place your order.
+                  {email ? ` Lost it? Email ${email} from the same address and we'll send it to you.` : ""}
+                </p>
               </>
             ) : (
               <>
@@ -134,6 +148,7 @@ export function Waitlist({
                     You&apos;re <strong>#{state.queueNumber}</strong> in the queue.
                   </p>
                 )}
+                {state.waitlistId && <WaitlistIdCard id={state.waitlistId} />}
                 <p>
                   Your place is reserved. We&apos;ll contact you personally{email ? ` from ${email}` : ""} when your spot
                   comes up. Still no obligation to buy.
@@ -201,6 +216,34 @@ export function Waitlist({
           </form>
         )}
       </div>
+    </div>
+  );
+}
+
+function WaitlistIdCard({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* clipboard blocked: the ID is selectable */
+    }
+  }
+  return (
+    <div className="wl__id">
+      <span className="wl__id-label">Your waitlist ID</span>
+      <div className="wl__id-row">
+        <code className="wl__id-code" data-testid="waitlist-id">{id}</code>
+        <button type="button" className="btn btn-secondary wl__id-copy" onClick={copy}>
+          {copied ? "Copied!" : "Copy"}
+        </button>
+      </div>
+      <p className="wl__id-hint">
+        <strong>Save this ID.</strong> You&apos;ll need it to send your order request in Build Yours. This browser
+        remembers it too.
+      </p>
     </div>
   );
 }

@@ -14,6 +14,7 @@ export interface WaitlistEntry {
   status: string;
   source: string;
   joined: string;
+  code: string;
 }
 
 const STATUS_OPTIONS = [
@@ -107,6 +108,9 @@ export function WaitlistRowEditor({ entry, first, last }: { entry: WaitlistEntry
             <a href={`mailto:${entry.email}`}>{entry.email}</a> · joined {entry.joined}
             {entry.source === "owner" ? " · added by you" : ""}
           </span>
+          <span className="a-wl__id small">
+            Waitlist ID <code>{entry.code}</code>
+          </span>
           {entry.note && <span className="a-quote small">“{entry.note}”</span>}
           {entry.privateNote && <span className="a-chip a-chip--private">Private: {entry.privateNote}</span>}
         </div>
@@ -116,6 +120,18 @@ export function WaitlistRowEditor({ entry, first, last }: { entry: WaitlistEntry
         <button type="button" className="a-btn a-btn--sm a-btn--ghost" disabled={busy || first} onClick={() => call("PATCH", url, { move: "up" })} aria-label={`Move ${entry.name} up`}>↑ Up</button>
         <button type="button" className="a-btn a-btn--sm a-btn--ghost" disabled={busy || last} onClick={() => call("PATCH", url, { move: "down" })} aria-label={`Move ${entry.name} down`}>↓ Down</button>
         <button type="button" className="a-btn a-btn--sm" onClick={() => setEditing((v) => !v)} aria-expanded={editing}>{editing ? "Close" : "Edit"}</button>
+        <button
+          type="button"
+          className="a-btn a-btn--sm a-btn--ghost"
+          disabled={busy}
+          onClick={() => {
+            if (window.confirm(`Give ${entry.name} a new waitlist ID? Their old ID will stop working for orders.`)) {
+              call("PATCH", url, { newId: true }, { success: "New ID issued. Send it to them yourself." });
+            }
+          }}
+        >
+          New ID
+        </button>
         <button
           type="button"
           className="a-btn a-btn--sm a-btn--danger"

@@ -37,6 +37,7 @@ import {
 import { CoverIcon } from "./CoverIcons";
 import { BuildPreview } from "./build/BuildPreview";
 import { CloseIcon } from "./icons";
+import { readSavedWaitlistId } from "@/lib/waitlist-id";
 
 const STORAGE_KEY = "hackulator.build.v2";
 
@@ -95,6 +96,7 @@ export function Configurator({
   const [nameTouched, setNameTouched] = useState(false);
   const [dialogMode, setDialogMode] = useState<"order" | "enquiry">("order");
   const [submit, setSubmit] = useState<SubmitState>({ kind: "idle" });
+  const [waitlistId, setWaitlistId] = useState("");
   const dialogRef = useRef<HTMLDialogElement>(null);
   const returnFocusRef = useRef<HTMLButtonElement | null>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
@@ -175,6 +177,9 @@ export function Configurator({
   const openDialog = (mode: "order" | "enquiry", trigger: HTMLButtonElement) => {
     setDialogMode(mode);
     setSubmit({ kind: "idle" });
+    // Prefer the ID this browser was given when joining (it may have joined since the dialog was last open).
+    const saved = mode === "order" ? readSavedWaitlistId() : "";
+    if (saved) setWaitlistId(saved);
     returnFocusRef.current = trigger;
     dialogRef.current?.showModal?.();
   };
@@ -182,7 +187,7 @@ export function Configurator({
 
   const isOrder = dialogMode === "order";
   const mailBody = isOrder
-    ? `Hi Hackulator,\n\nI'd like to order this build. Please confirm the base price, the total and availability before I pay anything.\n\n${summaryText}`
+    ? `Hi Hackulator,\n\nI'd like to order this build. Please confirm the base price, the total and availability before I pay anything.\n\nWaitlist ID: ${waitlistId.trim() || "(paste your waitlist ID here)"}\n\n${summaryText}`
     : `Hi Hackulator,\n\nI have a question about this build:\n\n\n${summaryText}`;
   const mailto = email
     ? `mailto:${email}?subject=${encodeURIComponent(isOrder ? "Hackulator order request" : "Hackulator build enquiry")}&body=${encodeURIComponent(mailBody)}`
@@ -201,6 +206,7 @@ export function Configurator({
           name: fd.get("name"),
           email: fd.get("email"),
           message: fd.get("message"),
+          ...(dialogMode === "order" ? { waitlistId: fd.get("waitlistId") } : {}),
           website: fd.get("website"), // honeypot
           build,
         }),
@@ -264,6 +270,11 @@ export function Configurator({
               <button type="button" className="btn btn-secondary btn-block" onClick={(e) => openDialog("enquiry", e.currentTarget)}>
                 Ask a question
               </button>
+              <p className="summary__wl-note">
+                Order requests need your <strong>waitlist ID</strong>. No ID?{" "}
+                <a href="#waitlist">Join the waitlist (free)</a>. Anyone can try builds, see prices, save, share and ask
+                questions.
+              </p>
               <div className="summary__row summary__row--3">
                 <button type="button" className="btn btn-secondary btn-sm" onClick={saveLocal}>
                   Save
@@ -722,6 +733,32 @@ export function Configurator({
                   : "Your question is sent with this build attached."}{" "}
                 We only use these details to reply about your Hackulator.
               </p>
+              {isOrder && (
+                <div className="field">
+                  <label htmlFor={`${ids}-c-wlid`}>Waitlist ID</label>
+                  <input
+                    id={`${ids}-c-wlid`}
+                    name="waitlistId"
+                    type="text"
+                    required
+                    maxLength={20}
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder="HK-XXXX-XXXX"
+                    className="field__code"
+                    value={waitlistId}
+                    onChange={(e) => setWaitlistId(e.target.value)}
+                    aria-describedby={`${ids}-c-wlid-hint`}
+                  />
+                  <p className="field__hint" id={`${ids}-c-wlid-hint`}>
+                    You got this when you joined the waitlist. Not on it yet?{" "}
+                    <a href="#waitlist" onClick={closeDialog}>
+                      Join free
+                    </a>
+                    . Joining has no obligation to buy.
+                  </p>
+                </div>
+              )}
               <div className="field">
                 <label htmlFor={`${ids}-c-name`}>Your name</label>
                 <input id={`${ids}-c-name`} name="name" type="text" required maxLength={80} autoComplete="name" />

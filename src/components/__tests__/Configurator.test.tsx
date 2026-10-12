@@ -78,16 +78,39 @@ describe("Configurator", () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ reference: "ENQ-0007" }), { status: 201, headers: { "Content-Type": "application/json" } }),
     );
+    localStorage.setItem("hackulator.waitlistId", "HK-ABCD-EFGH");
     const user = userEvent.setup();
     const { container } = render(<Configurator {...props} onlineSubmissions />);
     await user.click(within(summary()).getByRole("button", { name: "Send order request" }));
     const dialog = within(container.querySelector("dialog")!);
+    // The waitlist ID this browser was given is filled in for you.
+    expect(dialog.getByLabelText("Waitlist ID", { selector: "input" })).toHaveValue("HK-ABCD-EFGH");
     await user.type(dialog.getByLabelText("Your name", { selector: "input" }), "Sam");
     await user.type(dialog.getByLabelText("Email", { selector: "input" }), "sam@example.com");
     await user.click(dialog.getByRole("button", { name: "Send order request", hidden: true }));
     const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
-    expect(body).toMatchObject({ kind: "order", name: "Sam", email: "sam@example.com" });
+    expect(body).toMatchObject({ kind: "order", name: "Sam", email: "sam@example.com", waitlistId: "HK-ABCD-EFGH" });
     expect(await dialog.findByText("ENQ-0007")).toBeInTheDocument();
+    localStorage.clear();
+  });
+
+  it("lets anyone ask a question without a waitlist ID", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ reference: "ENQ-0008" }), { status: 201, headers: { "Content-Type": "application/json" } }),
+    );
+    const user = userEvent.setup();
+    const { container } = render(<Configurator {...props} onlineSubmissions />);
+    expect(within(summary()).getByText(/need your/)).toHaveTextContent(/waitlist ID/);
+    await user.click(within(summary()).getByRole("button", { name: "Ask a question" }));
+    const dialog = within(container.querySelector("dialog")!);
+    expect(dialog.queryByLabelText("Waitlist ID", { selector: "input" })).toBeNull();
+    await user.type(dialog.getByLabelText("Your name", { selector: "input" }), "Q");
+    await user.type(dialog.getByLabelText("Email", { selector: "input" }), "q@example.com");
+    await user.type(dialog.getByLabelText("Your question", { selector: "textarea" }), "Hi?");
+    await user.click(dialog.getByRole("button", { name: "Send question", hidden: true }));
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.kind).toBe("enquiry");
+    expect(body).not.toHaveProperty("waitlistId");
   });
 
   it("blocks sending an order until the build is complete", async () => {

@@ -1,5 +1,5 @@
 import "server-only";
-import { SCHEMA_SQL, seedCatalogue } from "./schema";
+import { SCHEMA_SQL, backfillWaitlistCodes, seedCatalogue } from "./schema";
 
 export type Row = Record<string, unknown>;
 
@@ -83,6 +83,7 @@ async function connect(): Promise<Db | null> {
   }
   await db.exec(SCHEMA_SQL);
   await seedCatalogue(db);
+  await backfillWaitlistCodes(db);
   return db;
 }
 

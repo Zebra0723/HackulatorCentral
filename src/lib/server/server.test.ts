@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 process.env.HACKULATOR_DEMO_DIR = "memory://";
 
@@ -44,6 +44,44 @@ describe("owner code sign-in", () => {
 });
 
 describe("enquiries", () => {
+  // Orders need a waitlist ID. Entries are removed afterwards so the waitlist tests start empty.
+  let entryId = 0;
+  let wl = "";
+  beforeAll(async () => {
+    entryId = await waitlist.addWaitlistEntry(db, ME, { name: "Sam", email: "sam@example.com" });
+    wl = (await waitlist.listWaitlist(db)).find((r) => r.id === entryId)!.code;
+  });
+  afterAll(async () => {
+    await db.query("delete from waitlist");
+  });
+
+  it("only accepts orders with a valid waitlist ID, but questions from anyone", async () => {
+    const order = { kind: "order", name: "Sam", email: "sam@example.com", message: "", build: classicsBuild };
+    await expect(orders.createEnquiry(db, order)).rejects.toThrow(/need your waitlist ID/);
+    await expect(orders.createEnquiry(db, { ...order, waitlistId: "HK-AAAA-AAAA" })).rejects.toThrow(/wasn't found/);
+    await expect(orders.createEnquiry(db, { ...order, waitlistId: "not an id" })).rejects.toThrow(/wasn't found/);
+
+    // Lower case and missing dashes are fine.
+    const loose = wl.toLowerCase().replace(/-/g, " ");
+    const { reference } = await orders.createEnquiry(db, { ...order, waitlistId: loose });
+    const [row] = (await orders.listEnquiries(db)).filter((e) => e.reference === reference);
+    expect(row).toMatchObject({ waitlist_id: entryId, waitlist_code: wl, waitlist_name: "Sam" });
+
+    const q = await orders.createEnquiry(db, { kind: "enquiry", name: "Q", email: "q@example.com", message: "Hi?", build: classicsBuild });
+    expect(q.reference).toMatch(/^ENQ-/);
+
+    // A withdrawn entry or a replaced ID can no longer order.
+    await waitlist.regenerateWaitlistCode(db, ME, entryId);
+    await expect(orders.createEnquiry(db, { ...order, waitlistId: wl })).rejects.toThrow(/wasn't found/);
+    const fresh = (await waitlist.listWaitlist(db)).find((r) => r.id === entryId)!.code;
+    expect(fresh).not.toBe(wl);
+    wl = fresh;
+    const other = await waitlist.addWaitlistEntry(db, ME, { name: "Wd", email: "wd@example.com" });
+    const otherCode = (await waitlist.listWaitlist(db)).find((r) => r.id === other)!.code;
+    await waitlist.updateWaitlistEntry(db, ME, other, { status: "withdrawn" });
+    await expect(orders.createEnquiry(db, { ...order, waitlistId: otherCode })).rejects.toThrow(/wasn't found/);
+  });
+
   it("prices on the server and ignores anything the browser claims", async () => {
     const { reference } = await orders.createEnquiry(db, {
       kind: "order",
@@ -51,6 +89,7 @@ describe("enquiries", () => {
       email: "sam@example.com",
       message: "",
       build: { ...classicsBuild, extrasSubtotal: 1, quote: { extrasSubtotal: 1 } },
+      waitlistId: wl,
     });
     expect(reference).toMatch(/^ENQ-\d{4}$/);
     const [row] = await db.query<{ quote: { extrasSubtotal: number } }>("select quote from enquiries where reference = $1", [reference]);
@@ -58,11 +97,11 @@ describe("enquiries", () => {
   });
 
   it("refuses an order for the unfinished Arcade Pack (it is silently dropped) and incomplete builds", async () => {
-    const { reference } = await orders.createEnquiry(db, { kind: "order", name: "A", email: "a@example.com", message: "", build: { packIds: ["arcade"] } });
+    const { reference } = await orders.createEnquiry(db, { kind: "order", name: "A", email: "a@example.com", message: "", build: { packIds: ["arcade"] }, waitlistId: wl });
     const [row] = await db.query<{ quote: { extrasSubtotal: number } }>("select quote from enquiries where reference = $1", [reference]);
     expect(row.quote.extrasSubtotal).toBe(0);
     await expect(
-      orders.createEnquiry(db, { kind: "order", name: "A", email: "a@example.com", message: "", build: { coverIcon: { enabled: true } } }),
+      orders.createEnquiry(db, { kind: "order", name: "A", email: "a@example.com", message: "", build: { coverIcon: { enabled: true } }, waitlistId: wl }),
     ).rejects.toThrow(/isn't complete/);
   });
 });
@@ -220,9 +259,10 @@ describe("waitlist and site settings", () => {
     await expect(waitlist.joinWaitlist(db, { name: "No", email: "no@example.com" })).rejects.toThrow(/tick the box/);
     const a = await join("Ada");
     expect(a).toMatchObject({ already: false, queueNumber: 1, summary: { spots: 2, taken: 1, left: 1 } });
-    // The same email again: friendly answer, no duplicate, no details revealed.
+    expect(a.waitlistId).toMatch(/^HK-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
+    // The same email again: friendly answer, no duplicate, no details (and never the ID) revealed.
     const again = await join("Someone", { email: "ADA@example.com" });
-    expect(again).toMatchObject({ already: true, queueNumber: null });
+    expect(again).toMatchObject({ already: true, queueNumber: null, waitlistId: null });
     const b = await join("Bo");
     expect(b.queueNumber).toBe(2);
     await expect(join("Cy")).rejects.toThrow(/Every spot/);

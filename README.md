@@ -15,7 +15,7 @@ Website, build configurator, private order tracking and owner control room for *
      - Tetris has fair 7-piece bags, a ghost piece, hard drop (= / EXE), a short lock delay, a 3-piece next queue, line-clear flashes and level-ups.
      - On phones, swipe or tap the screen, and hold the arrow buttons to repeat.
    - Every screen preview carries a clear yellow **“Simple mockup”** tag and notice: the real Hackulator screen will look much nicer than the web mockup.
-2. **Live Build Yours preview.** FRONT / COVER / SCREEN views. Front shows your games on the launcher. Cover shows the name and icon in your colours inside the printable area. Screen shows your Custom UI: accent, light/dark, welcome text, tiles/list layout and font, all part of the one £5 option. You can save on this device, download a summary, share a link (option IDs only, never the cover name or welcome text) and send an order request or question.
+2. **Live Build Yours preview.** FRONT / COVER / SCREEN views. Front shows your games on the launcher. Cover shows the name and icon in your colours inside the printable area. Screen shows your Custom UI: accent, light/dark, welcome text, tiles/list layout and font, all part of the one £5 option. Anyone can use it to try builds and see the costs. They can also save on this device, download a summary, share a link (option IDs only, never the cover name or welcome text) and ask a question. **Order requests need a waitlist ID** (see below).
 3. **Follow Your Build.** Private tracking pages at `/track/<secret token>` showing:
    - stage
    - updates
@@ -29,6 +29,9 @@ Website, build configurator, private order tracking and owner control room for *
    - Shows live "X of N spots left" with a spot grid; there are 10 spots by default.
    - People join with their name, email, an optional dream build and a consent tick.
    - Joining is free with no obligation to buy; it only reserves a place in the manufacturing queue.
+   - Each person gets a **waitlist ID** (like `HK-7KQ2-MX4P`) when they join. It's shown once with a Copy button and remembered in that browser, and it's needed to send an order request.
+     - The server rejects orders with a missing, wrong or withdrawn ID. Lower case and missing dashes are accepted.
+     - Joining again with the same email never reveals the ID. The person is told to use their original ID or email you.
    - Nothing is emailed automatically. When the list is full or closed, the form becomes an email link.
 5. **Owner control room** at `/admin`. Type the owner code on the calculator to open it; every action is checked on the server:
    - dashboard
@@ -36,6 +39,8 @@ Website, build configurator, private order tracking and owner control room for *
    - enquiries
    - catalogue
    - **waitlist**: change the number of spots, open or close it, add, edit, reorder, withdraw or remove people, and email everyone holding a spot
+     - See each person's waitlist ID and issue a **New ID**, which stops the old one working (send the new one to them yourself).
+     - Order requests in **Enquiries** show the waitlist ID and name they were sent with.
    - **site settings**: the announcement bar, the hero status pill, the stage, base price, availability and fulfilment text on the status card, and switching online order requests on or off
    - devices and service records
    - software releases
@@ -137,7 +142,7 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
 
 ## Tests
 
-`npm test` runs **90 tests** in 7 files, all passing:
+`npm test` runs **92 tests** in 7 files, all passing:
 
 - **Pricing (25):** every required example, plus no double charges, tier switching keeping cover choices, the Arcade Pack's third game staying “to be announced”, gold surcharges, share links never carrying personal text, and sanitising untrusted input.
 - **Calculator, games and OS (40):** 17 parser + 14 game + 9 OS tests covering:
@@ -146,9 +151,10 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
   - 2048: merging and tracked slides for the animations
   - Tetris: line clears, the 7-piece bag, hard drop and lock delay
   - the OS: READY/GO, = as hard drop only in Tetris, swipe/tap, best scores, pause / restart / return, and the 07232015 control-room shortcut
-- **Backend on a real in-memory Postgres (14):**
+- **Backend on a real in-memory Postgres (15):**
   - owner-code sign-in, rejecting wrong codes and rate-limiting guesses
   - server-side pricing of enquiries
+  - orders need a valid, active waitlist ID (missing, wrong, replaced and withdrawn IDs are refused); questions don't
   - the £5 deposit rule (including deposit and stage in one save), with covered software jobs exempt
   - internal notes never shown; revoked and invalid links show nothing; the order number alone gives no access
   - delivered orders leave the queue but stay in history; paid orders can't be deleted
@@ -156,9 +162,9 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
   - catalogue edits propagate without changing accepted orders
   - covered service work can't be charged
   - the export contains no secrets
-  - waitlist: fills in order, refuses when full or closed, no duplicate emails, reordering, withdrawing frees a spot, owner edits
+  - waitlist: each join gets an ID (never re-shown for an existing email), fills in order, refuses when full or closed, no duplicate emails, reordering, withdrawing frees a spot, owner edits
   - site settings are validated, trimmed and fall back to defaults
-- **Components (11):** 9 configurator tests covering flows, honest “not submitted” messaging and real submission, plus 2 film stage tests.
+- **Components (12):** 10 configurator tests covering flows, honest “not submitted” messaging, real submission with the saved waitlist ID and questions without one, plus 2 film stage tests.
 
 Also run against the production build in Chromium: an end-to-end walkthrough of all four features on desktop and phone sizes, plus unauthenticated-access checks (401/307/403), privacy headers, keyboard and touch use, reduced motion, and no horizontal scrolling. The results are in the commit/PR notes.
 

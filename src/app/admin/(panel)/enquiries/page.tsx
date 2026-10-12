@@ -33,6 +33,15 @@ export default async function EnquiriesPage({ searchParams }: { searchParams: Pr
                 </div>
                 <span className={`a-status a-status--enq-${e.status}`}>{e.status}</span>
               </div>
+              {e.kind === "order" && (
+                <p className="small">
+                  {e.waitlist_code ? (
+                    <>Waitlist ID <code>{e.waitlist_code}</code>{e.waitlist_name ? ` · ${e.waitlist_name}` : ""} (<Link href="/admin/waitlist">waitlist</Link>)</>
+                  ) : (
+                    <span className="a-muted">No waitlist entry linked (removed, or sent before IDs existed)</span>
+                  )}
+                </p>
+              )}
               {e.message && <p className="a-quote">{e.message}</p>}
               {e.quote && (
                 <details>

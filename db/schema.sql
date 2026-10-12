@@ -195,3 +195,6 @@ create table if not exists waitlist (
   updated_at timestamptz not null default now()
 );
 create unique index if not exists waitlist_email_idx on waitlist (lower(email));
+alter table waitlist add column if not exists code text;
+create unique index if not exists waitlist_code_idx on waitlist (code);
+alter table enquiries add column if not exists waitlist_id int references waitlist(id) on delete set null;

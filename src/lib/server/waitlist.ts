@@ -3,6 +3,7 @@ import { audit } from "./audit";
 import { ValidationError } from "./catalogue";
 import type { Db } from "./db";
 import { getSettings } from "./settings";
+import { newWaitlistCode, normalizeWaitlistCode } from "./waitlist-code";
 
 export const WAITLIST_STATUSES = ["waiting", "contacted", "converted", "withdrawn"] as const;
 export type WaitlistStatus = (typeof WAITLIST_STATUSES)[number];
@@ -22,6 +23,7 @@ export interface WaitlistRow {
   private_note: string;
   status: WaitlistStatus;
   source: string;
+  code: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -64,7 +66,14 @@ async function queueNumber(db: Db, id: number) {
   return r.n;
 }
 
-export type JoinResult = { ok: true; already: boolean; queueNumber: number | null; summary: WaitlistSummary };
+export type JoinResult = {
+  ok: true;
+  already: boolean;
+  queueNumber: number | null;
+  /** Shown once to the person who just joined; needed to place an order. Never returned for an existing email. */
+  waitlistId: string | null;
+  summary: WaitlistSummary;
+};
 
 /** Public join. Free, no obligation; it only records a place in the queue. */
 export async function joinWaitlist(db: Db, input: Record<string, unknown>): Promise<JoinResult> {
@@ -78,22 +87,29 @@ export async function joinWaitlist(db: Db, input: Record<string, unknown>): Prom
   const result = await db.tx(async (t) => {
     await t.exec("lock table waitlist in share row exclusive mode");
     const existing = await t.query<{ id: number }>("select id from waitlist where lower(email) = $1", [email]);
-    if (existing.length) return { already: true, id: null as number | null };
+    if (existing.length) return { already: true, id: null as number | null, code: null as string | null };
     const settings = await getSettings(t);
     if (!settings.waitlistOpen) throw new ValidationError("The waitlist is closed right now. Email us and we'll let you know when it reopens.");
     if ((await takenCount(t)) >= settings.waitlistSpots) {
       throw new ValidationError("Every spot has just been taken. Email us to hear if one opens up.");
     }
     const [{ next }] = await t.query<{ next: number }>("select coalesce(max(position), 0) + 1 as next from waitlist");
+    const code = newWaitlistCode();
     const [row] = await t.query<{ id: number }>(
-      "insert into waitlist (position, name, email, note) values ($1,$2,$3,$4) returning id",
-      [next, name, email, note],
+      "insert into waitlist (position, name, email, note, code) values ($1,$2,$3,$4,$5) returning id",
+      [next, name, email, note, code],
     );
-    return { already: false, id: row.id };
+    return { already: false, id: row.id, code };
   });
   const summary = await waitlistSummary(db);
   // Someone already on the list gets the same friendly answer without any of their details.
-  return { ok: true, already: result.already, queueNumber: result.id ? await queueNumber(db, result.id) : null, summary };
+  return {
+    ok: true,
+    already: result.already,
+    queueNumber: result.id ? await queueNumber(db, result.id) : null,
+    waitlistId: result.code,
+    summary,
+  };
 }
 
 export async function listWaitlist(db: Db) {
@@ -114,8 +130,8 @@ export async function addWaitlistEntry(db: Db, actor: string, input: Record<stri
   if (dup.length) throw new ValidationError("That email is already on the waitlist.");
   const [{ next }] = await db.query<{ next: number }>("select coalesce(max(position), 0) + 1 as next from waitlist");
   const [row] = await db.query<{ id: number }>(
-    "insert into waitlist (position, name, email, note, private_note, source) values ($1,$2,$3,$4,$5,'owner') returning id",
-    [next, name, email, clean(input.note, 300), clean(input.privateNote, 1000)],
+    "insert into waitlist (position, name, email, note, private_note, source, code) values ($1,$2,$3,$4,$5,'owner',$6) returning id",
+    [next, name, email, clean(input.note, 300), clean(input.privateNote, 1000), newWaitlistCode()],
   );
   await audit(db, actor, "waitlist.add", "waitlist", row.id);
   return row.id;
@@ -162,4 +178,19 @@ export async function moveWaitlistEntry(db: Db, actor: string, id: number, dir: 
 export async function deleteWaitlistEntry(db: Db, actor: string, id: number) {
   await db.query("delete from waitlist where id = $1", [id]);
   await audit(db, actor, "waitlist.delete", "waitlist", id);
+}
+
+/** Give someone a fresh waitlist ID (e.g. if theirs was shared by mistake). The old one stops working. */
+export async function regenerateWaitlistCode(db: Db, actor: string, id: number) {
+  const rows = await db.query("update waitlist set code = $2, updated_at = now() where id = $1 returning id", [id, newWaitlistCode()]);
+  if (!rows.length) throw new ValidationError("That waitlist entry no longer exists.");
+  await audit(db, actor, "waitlist.newid", "waitlist", id);
+}
+
+/** Look up an active waitlist place from the ID someone typed. */
+export async function findActiveWaitlistEntry(db: Db, input: unknown): Promise<WaitlistRow | null> {
+  const code = normalizeWaitlistCode(input);
+  if (!code) return null;
+  const [row] = await db.query<WaitlistRow>("select * from waitlist where code = $1", [code]);
+  return row && row.status !== "withdrawn" ? row : null;
 }

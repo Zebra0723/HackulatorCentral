@@ -53,6 +53,7 @@ export default async function WaitlistPage() {
                   status: r.status,
                   source: r.source,
                   joined: fmtDateTime(r.created_at),
+                  code: r.code,
                 }}
               />
             ))}

@@ -33,6 +33,7 @@ const ACTION_TEXT: Record<string, string> = {
   "waitlist.update": "Waitlist: entry edited",
   "waitlist.move": "Waitlist: order changed",
   "waitlist.delete": "Waitlist: entry removed",
+  "waitlist.newid": "Waitlist: new ID issued",
   "settings.update": "Site settings changed",
 };
 

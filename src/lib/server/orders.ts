@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { formatPence } from "@/config/offer";
 import { buildSummaryText, describeUi, ownedGames, quote, sanitizeBuild, uiIncluded, type Build, type Quote } from "@/lib/pricing";
 import { audit } from "./audit";
+import { findActiveWaitlistEntry } from "./waitlist";
 import { ValidationError, parsePence, readCatalogue } from "./catalogue";
 import type { Db } from "./db";
 
@@ -145,12 +146,15 @@ export interface EnquiryRow {
   build: Build | null;
   quote: Quote | null;
   created_at: Date;
+  waitlist_id: number | null;
+  waitlist_code?: string | null;
+  waitlist_name?: string | null;
 }
 
 /** Public submission. Pricing is recalculated here from the live catalogue; the browser's numbers are ignored. */
 export async function createEnquiry(
   db: Db,
-  input: { kind: unknown; name: unknown; email: unknown; message: unknown; build: unknown },
+  input: { kind: unknown; name: unknown; email: unknown; message: unknown; build: unknown; waitlistId?: unknown },
 ): Promise<{ reference: string }> {
   const kind = input.kind === "enquiry" ? "enquiry" : "order";
   const name = cleanText(input.name, 80);
@@ -163,17 +167,29 @@ export async function createEnquiry(
   const build = sanitizeBuild(input.build, catalogue);
   const q = quote(build, catalogue);
   if (kind === "order" && q.issues.length) throw new ValidationError(`Your build isn't complete yet: ${q.issues[0]}`);
+  // Orders are for waitlist members only; questions are open to everyone.
+  let waitlistId: number | null = null;
+  if (kind === "order") {
+    if (!String(input.waitlistId ?? "").trim()) {
+      throw new ValidationError("Orders need your waitlist ID. Join the waitlist (it's free) to get one.");
+    }
+    const entry = await findActiveWaitlistEntry(db, input.waitlistId);
+    if (!entry) throw new ValidationError("That waitlist ID wasn't found. Check it and try again, or email us.");
+    waitlistId = entry.id;
+  }
   const reference = await nextRef(db, "enquiry_ref_seq", "ENQ");
   await db.query(
-    "insert into enquiries (reference, kind, name, email, message, build, quote) values ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb)",
-    [reference, kind, name, email, message, JSON.stringify(build), JSON.stringify(q)],
+    "insert into enquiries (reference, kind, name, email, message, build, quote, waitlist_id) values ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8)",
+    [reference, kind, name, email, message, JSON.stringify(build), JSON.stringify(q), waitlistId],
   );
   return { reference };
 }
 
 export async function listEnquiries(db: Db, status?: string) {
-  if (status) return db.query<EnquiryRow>("select * from enquiries where status = $1 order by created_at desc", [status]);
-  return db.query<EnquiryRow>("select * from enquiries order by created_at desc limit 200");
+  const base = `select e.*, w.code as waitlist_code, w.name as waitlist_name
+    from enquiries e left join waitlist w on w.id = e.waitlist_id`;
+  if (status) return db.query<EnquiryRow>(`${base} where e.status = $1 order by e.created_at desc`, [status]);
+  return db.query<EnquiryRow>(`${base} order by e.created_at desc limit 200`);
 }
 
 export async function setEnquiryStatus(db: Db, actor: string, id: number, status: string) {
