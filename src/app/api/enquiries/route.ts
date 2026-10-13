@@ -1,8 +1,9 @@
+import { notifyOrderRequest } from "@/lib/server/notify";
 import { createEnquiry } from "@/lib/server/orders";
 import { getDb } from "@/lib/server/db";
 import { clientIp, errorResponse, json, rateLimit, readJson, sameOrigin } from "@/lib/server/http";
 
-/** Public: store an order request or question. Nothing is emailed; it appears in the admin area. */
+/** Public: store an order request or question. It appears in the admin area; order requests are also emailed to the owner. */
 export async function POST(req: Request) {
   try {
     if (!sameOrigin(req)) return json({ error: "Cross-site request blocked." }, 403);
@@ -13,7 +14,9 @@ export async function POST(req: Request) {
     if (!(await rateLimit(db, `enq:${clientIp(req)}`, 6, 60))) {
       return json({ error: "Too many requests from here. Please try again later or email us." }, 429);
     }
-    const { reference } = await createEnquiry(db, body as never);
+    const { reference, kind } = await createEnquiry(db, body as never);
+    // Order requests are also emailed to the owner. A failed email never fails the request; it's logged instead.
+    if (kind === "order") await notifyOrderRequest(db, reference, new URL(req.url).origin);
     return json({ reference }, 201);
   } catch (e) {
     return errorResponse(e);

@@ -14,10 +14,22 @@ export interface SettingsValues {
   availabilityText: string;
   fulfilmentText: string;
   enquiriesOpen: boolean;
+  orderEmailTo: string;
 }
 
-export function SettingsForm({ values }: { values: SettingsValues }) {
+export function SettingsForm({
+  values,
+  emailReady,
+  defaultEmail,
+}: {
+  values: SettingsValues;
+  /** Whether RESEND_API_KEY is set on the server. */
+  emailReady: boolean;
+  /** The site's contact email, used when no order email address is set. */
+  defaultEmail: string;
+}) {
   const { call, busy, error, message, setError } = useApi();
+  const test = useApi();
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -42,6 +54,7 @@ export function SettingsForm({ values }: { values: SettingsValues }) {
         availabilityText: fd.get("availabilityText"),
         fulfilmentText: fd.get("fulfilmentText"),
         enquiriesOpen: fd.get("enquiriesOpen") === "on",
+        orderEmailTo: fd.get("orderEmailTo"),
       },
       { success: "Saved. The website shows the change straight away." },
     );
@@ -83,6 +96,34 @@ export function SettingsForm({ values }: { values: SettingsValues }) {
         <legend>Online requests</legend>
         <label className="a-check"><input type="checkbox" name="enquiriesOpen" defaultChecked={values.enquiriesOpen} /> Let people send order requests and questions from Build Yours</label>
         <small className="a-muted">When off, the site offers the email link instead and stores nothing.</small>
+      </fieldset>
+
+      <fieldset className="a-fieldset">
+        <legend>Order request emails</legend>
+        <label className="a-field">
+          <span>Email each new order request to</span>
+          <input name="orderEmailTo" type="email" defaultValue={values.orderEmailTo} maxLength={160} placeholder={defaultEmail || "you@example.com"} />
+          <small>Leave empty to use {defaultEmail || "the site's contact email"}. Reply to the email to answer the customer. Questions aren&apos;t emailed; they stay in Enquiries.</small>
+        </label>
+        {emailReady ? (
+          <div className="a-inline a-wrap">
+            <span className="a-chip">Email sending is set up</span>
+            <button
+              type="button"
+              className="a-btn a-btn--sm"
+              disabled={test.busy}
+              onClick={() => test.call("POST", "/api/admin/settings/test-email", {}, { success: "Test email sent. Check your inbox (and spam)." })}
+            >
+              Send a test email
+            </button>
+          </div>
+        ) : (
+          <p className="a-note small">
+            <strong>Not sending yet:</strong> add a free Resend API key as <code>RESEND_API_KEY</code> in Vercel, then redeploy.
+            Until then, order requests are only saved in Enquiries.
+          </p>
+        )}
+        <Feedback error={test.error} message={test.message} />
       </fieldset>
 
       <Feedback error={error} message={message} />

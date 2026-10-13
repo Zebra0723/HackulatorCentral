@@ -155,7 +155,7 @@ export interface EnquiryRow {
 export async function createEnquiry(
   db: Db,
   input: { kind: unknown; name: unknown; email: unknown; message: unknown; build: unknown; waitlistId?: unknown },
-): Promise<{ reference: string }> {
+): Promise<{ reference: string; kind: "order" | "enquiry" }> {
   const kind = input.kind === "enquiry" ? "enquiry" : "order";
   const name = cleanText(input.name, 80);
   const email = cleanText(input.email, 160).toLowerCase();
@@ -182,7 +182,7 @@ export async function createEnquiry(
     "insert into enquiries (reference, kind, name, email, message, build, quote, waitlist_id) values ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8)",
     [reference, kind, name, email, message, JSON.stringify(build), JSON.stringify(q), waitlistId],
   );
-  return { reference };
+  return { reference, kind };
 }
 
 export async function listEnquiries(db: Db, status?: string) {

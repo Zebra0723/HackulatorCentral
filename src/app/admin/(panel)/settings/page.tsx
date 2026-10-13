@@ -1,5 +1,7 @@
 import { SettingsForm } from "@/components/admin/SettingsForm";
 import { requireAdminPage } from "@/lib/server/http";
+import { siteConfig } from "@/config/site";
+import { emailReady } from "@/lib/server/notify";
 import { getSettings } from "@/lib/server/settings";
 
 export default async function SettingsPage() {
@@ -12,7 +14,7 @@ export default async function SettingsPage() {
       </div>
       <p className="a-note">Changes appear on the website as soon as you save. Every change is recorded in Recent changes.</p>
       <section className="a-card">
-        <SettingsForm values={values} />
+        <SettingsForm values={values} emailReady={emailReady()} defaultEmail={siteConfig.contact.email ?? ""} />
       </section>
     </div>
   );

@@ -2,7 +2,7 @@
 
 Website, build configurator, private order tracking and owner control room for **Hackulator**, an independent prototype project that puts a custom board and colour display inside an ordinary Casio scientific calculator.
 
-> **Status: working locally, not deployed.** No payments are taken and no emails are sent by the site. Hackulator itself is still in development, and nothing on the site presents it as a finished product.
+> **Status: working locally, not deployed.** No payments are taken. The only email the site sends is a copy of each new order request to the owner, and only once `RESEND_API_KEY` is set; customers never get automatic emails. Hackulator itself is still in development, and nothing on the site presents it as a finished product.
 
 ---
 
@@ -41,7 +41,7 @@ Website, build configurator, private order tracking and owner control room for *
    - **waitlist**: change the number of spots, open or close it, add, edit, reorder, withdraw or remove people, and email everyone holding a spot
      - See each person's waitlist ID and issue a **New ID**, which stops the old one working (send the new one to them yourself).
      - Order requests in **Enquiries** show the waitlist ID and name they were sent with.
-   - **site settings**: the announcement bar, the hero status pill, the stage, base price, availability and fulfilment text on the status card, and switching online order requests on or off
+   - **site settings**: where order request emails go (with a **Send a test email** button), the announcement bar, the hero status pill, the stage, base price, availability and fulfilment text on the status card, and switching online order requests on or off
    - devices and service records
    - software releases
    - build sheets
@@ -81,6 +81,16 @@ The site needs a Postgres database for enquiries, tracking and the control room.
 If `DATABASE_URL` is missing in production, the public site still works. Online requests then say they aren't switched on (the email link remains), and `/admin` explains that no database is connected. Nothing falls back to browser storage or pretends to work.
 
 **Missing setup values:** just `DATABASE_URL`. See `.env.example`.
+
+### Order request emails (optional)
+
+Every new order request is saved in **Enquiries** and also emailed to you. Questions aren't emailed.
+
+1. Sign up free at [resend.com](https://resend.com) and create an API key (**API Keys → Create**).
+2. In Vercel → **Settings → Environment Variables**, add `RESEND_API_KEY` with that key, then redeploy.
+3. In the control room → **Site settings → Order request emails**, enter your email and press **Send a test email**.
+
+Until you add your own domain in Resend, it can only send to the address you signed up to Resend with, so use that one. The email includes the customer's name, email, waitlist ID, note and full build. Reply to it to answer them directly. If sending fails, the order is still saved and the failure appears in **Recent changes**.
 
 ## Owner sign-in (calculator code)
 
@@ -122,7 +132,7 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
 | Real calculator photo, key map, shared screen renderer | `public/media/hackulator-front.webp`, `src/components/device/` |
 | Homepage scroll story (reveals, ticker, word-by-word statement, progress bar) | `src/components/scroll/ScrollFx.tsx`, end of `src/app/globals.css` |
 | Configurator and live preview | `src/components/Configurator.tsx`, `src/components/build/` |
-| Database, auth, orders, catalogue, devices | `src/lib/server/` |
+| Database, auth, orders, catalogue, devices, order emails (`notify.ts`) | `src/lib/server/` |
 | API routes | `src/app/api/` (public: `enquiries`, `track/…/photos`; everything else under `admin/`) |
 | Control room pages | `src/app/admin/` |
 | Customer tracking page | `src/app/track/[token]/` |
@@ -142,7 +152,7 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
 
 ## Tests
 
-`npm test` runs **92 tests** in 7 files, all passing:
+`npm test` runs **93 tests** in 7 files, all passing:
 
 - **Pricing (25):** every required example, plus no double charges, tier switching keeping cover choices, the Arcade Pack's third game staying “to be announced”, gold surcharges, share links never carrying personal text, and sanitising untrusted input.
 - **Calculator, games and OS (40):** 17 parser + 14 game + 9 OS tests covering:
@@ -151,7 +161,7 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
   - 2048: merging and tracked slides for the animations
   - Tetris: line clears, the 7-piece bag, hard drop and lock delay
   - the OS: READY/GO, = as hard drop only in Tetris, swipe/tap, best scores, pause / restart / return, and the 07232015 control-room shortcut
-- **Backend on a real in-memory Postgres (15):**
+- **Backend on a real in-memory Postgres (16):**
   - owner-code sign-in, rejecting wrong codes and rate-limiting guesses
   - server-side pricing of enquiries
   - orders need a valid, active waitlist ID (missing, wrong, replaced and withdrawn IDs are refused); questions don't
@@ -164,6 +174,7 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
   - the export contains no secrets
   - waitlist: each join gets an ID (never re-shown for an existing email), fills in order, refuses when full or closed, no duplicate emails, reordering, withdrawing frees a spot, owner edits
   - site settings are validated, trimmed and fall back to defaults
+  - order requests are emailed to the owner with the waitlist ID and build; a missing key or a failed send is logged and never loses the request; questions aren't emailed
 - **Components (12):** 10 configurator tests covering flows, honest “not submitted” messaging, real submission with the saved waitlist ID and questions without one, plus 2 film stage tests.
 
 Also run against the production build in Chromium: an end-to-end walkthrough of all four features on desktop and phone sizes, plus unauthenticated-access checks (401/307/403), privacy headers, keyboard and touch use, reduced motion, and no horizontal scrolling. The results are in the commit/PR notes.

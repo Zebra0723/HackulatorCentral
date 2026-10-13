@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 process.env.HACKULATOR_DEMO_DIR = "memory://";
 
@@ -10,6 +10,7 @@ const orders = await import("./orders");
 const devices = await import("./devices");
 const settingsMod = await import("./settings");
 const waitlist = await import("./waitlist");
+const notify = await import("./notify");
 const { EMPTY_BUILD } = await import("@/lib/pricing");
 const { OWNER_CODE } = await import("@/lib/hackos/os");
 
@@ -295,5 +296,51 @@ describe("waitlist and site settings", () => {
     const exp = await devices.exportAll(db);
     expect(exp.waitlist.length).toBeGreaterThan(0);
     expect(exp.siteSettings.length).toBeGreaterThan(0);
+  });
+});
+
+describe("order request emails", () => {
+  it("emails the owner each new order request, and logs instead of failing when it can't", async () => {
+    await expect(settingsMod.saveSettings(db, ME, { orderEmailTo: "not an email" })).rejects.toThrow(/valid email/);
+    expect(await notify.orderEmailRecipient(db)).toBe("hackulator@dailyos.uk"); // falls back to the contact email
+    await settingsMod.saveSettings(db, ME, { orderEmailTo: " Owner@Example.com " });
+    expect(await notify.orderEmailRecipient(db)).toBe("owner@example.com");
+
+    const id = await waitlist.addWaitlistEntry(db, ME, { name: "Mo", email: "mo@example.com" });
+    const code = (await waitlist.listWaitlist(db)).find((r) => r.id === id)!.code;
+    const { reference } = await orders.createEnquiry(db, {
+      kind: "order", name: "Mo", email: "mo@example.com", message: "Gold star please", build: classicsBuild, waitlistId: code,
+    });
+
+    // Not set up: nothing is sent, the request stays saved and the failure is logged.
+    delete process.env.RESEND_API_KEY;
+    expect(await notify.notifyOrderRequest(db, reference)).toMatchObject({ sent: false });
+    const [logged] = await db.query<{ n: number }>("select count(*)::int as n from audit_log where action = 'enquiry.email_failed' and entity_id = $1", [reference]);
+    expect(logged.n).toBe(1);
+
+    process.env.RESEND_API_KEY = "test-key";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    try {
+      expect(await notify.notifyOrderRequest(db, reference, "https://example.com")).toEqual({ sent: true });
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe("https://api.resend.com/emails");
+      const body = JSON.parse((init as RequestInit).body as string);
+      expect(body).toMatchObject({ to: ["owner@example.com"], reply_to: "mo@example.com" });
+      expect(body.subject).toContain(reference);
+      expect(body.text).toContain(`Waitlist ID: ${code} (Mo)`);
+      expect(body.text).toContain("Gold star please");
+      expect(body.text).toContain("Classics Pack");
+      expect(body.text).toContain("https://example.com/admin/enquiries");
+
+      // The email service failing never throws.
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ message: "bad key" }), { status: 401 }));
+      expect(await notify.notifyOrderRequest(db, reference)).toEqual({ sent: false, reason: "Email service said 401: bad key" });
+      // Questions are not emailed.
+      const q = await orders.createEnquiry(db, { kind: "enquiry", name: "Q", email: "q@example.com", message: "Hi?", build: classicsBuild });
+      expect(await notify.notifyOrderRequest(db, q.reference)).toMatchObject({ sent: false });
+    } finally {
+      fetchMock.mockRestore();
+      delete process.env.RESEND_API_KEY;
+    }
   });
 });

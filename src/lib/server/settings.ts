@@ -21,6 +21,8 @@ export interface SiteSettings {
   fulfilmentText: string;
   /** Whether order requests and questions can be sent from the website. */
   enquiriesOpen: boolean;
+  /** Where new order requests are emailed. Empty = the site's contact email. */
+  orderEmailTo: string;
 }
 
 export const DEFAULT_SETTINGS: SiteSettings = {
@@ -34,6 +36,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   availabilityText: "",
   fulfilmentText: "",
   enquiriesOpen: true,
+  orderEmailTo: "",
 };
 
 const TEXT_LIMITS: Partial<Record<keyof SiteSettings, number>> = {
@@ -79,6 +82,10 @@ export async function saveSettings(db: Db, actor: string, input: Record<string, 
       changes.waitlistSpots = n;
     } else if (key === "basePricePence") {
       changes.basePricePence = v === null || v === "" ? null : parsePence(v, "Base price");
+    } else if (key === "orderEmailTo") {
+      const email = clean(v, 160).toLowerCase();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ValidationError("Enter a valid email address for order emails, or leave it empty.");
+      changes.orderEmailTo = email;
     } else if (typeof DEFAULT_SETTINGS[key] === "boolean") {
       (changes as Record<string, unknown>)[key] = v === true || v === "true";
     } else {
