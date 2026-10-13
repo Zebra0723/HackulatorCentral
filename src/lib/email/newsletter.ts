@@ -130,6 +130,69 @@ const b = <T extends BlockType>(type: T, patch: Partial<Extract<EmailBlock, { ty
 
 export const NEWSLETTER_PRESETS: { id: string; label: string; emoji: string; build: () => NewsletterContent }[] = [
   {
+    id: "intro",
+    label: "Introducing the Hackulator",
+    emoji: "🧮",
+    build: () => ({
+      version: 2,
+      subject: "Meet the Hackulator 🧮✨",
+      preheader: "A scientific calculator with a colour screen and real games. Here's what it is, and how to get one.",
+      theme: "midnight",
+      blocks: [
+        b("hero", {
+          eyebrow: "Introducing",
+          headline: "Meet the",
+          accentLine: "Hackulator.",
+          text: "Hi {name}! New electronics, a colour display and real games, built inside the scientific calculator you already know.",
+          buttonLabel: "Reserve my spot",
+          buttonUrl: "/#waitlist",
+          imageUrl: "/email/hero.jpg",
+        }),
+        b("banner", { kicker: "What is it?", text: "Your calculator. Upgraded.", style: "outline" }),
+        b("text", {
+          heading: "",
+          body: "The Hackulator starts as an ordinary Casio scientific calculator. Inside goes a **custom board and a colour screen**. It still does your maths, and then it plays games.\n\nIt's a **prototype in development**, built by hand, and the first batch is tiny.",
+          align: "center",
+        }),
+        b("stats", { items: [{ value: "3", label: "games included" }, { value: "8", label: "cover colours" }, { value: "8", label: "cover icons" }, { value: "£5", label: "Custom UI" }] }),
+        b("grid", {
+          columns: 3,
+          items: [
+            { imageUrl: "/email/snake.png", title: "Snake", body: "Wraps through the walls.", linkUrl: "/#games" },
+            { imageUrl: "/email/2048.png", title: "2048", body: "Tiles that slide and pop.", linkUrl: "/#games" },
+            { imageUrl: "/email/tetris.png", title: "Tetris", body: "With a ghost piece.", linkUrl: "/#games" },
+          ],
+        }),
+        b("feature", {
+          eyebrow: "Make it yours",
+          title: "Your calculator, your style",
+          body: "- Your **name** on the cover\n- A **cover icon** (dog, star, lightning…)\n- **8 colours** for the name and icon\n- **Custom UI**: your colours, font and welcome text",
+          imageUrl: "/email/colours.png",
+          imageSide: "left",
+          buttonLabel: "Build yours",
+          buttonUrl: "/#build",
+        }),
+        b("feature", {
+          eyebrow: "Try it now",
+          title: "Play it in your browser",
+          body: "The virtual Hackulator on the website is playable. Type **HOME 2 0 4 8 OK** to unlock the games.",
+          imageUrl: "/email/product.jpg",
+          imageSide: "right",
+          buttonLabel: "Play the demo",
+          buttonUrl: "/#games",
+        }),
+        b("image", { imageUrl: "/email/film.jpg", linkUrl: "/#film", caption: "Tap to watch the concept film", width: "inset" }),
+        b("waitlist", { style: "accent" }),
+        b("cta", {
+          headline: "Be one of the first.",
+          text: "Joining the waitlist is **free** with **no obligation to buy**. It just reserves your place in the manufacturing queue.",
+          buttonLabel: "Reserve my spot",
+          buttonUrl: "/#waitlist",
+        }),
+      ],
+    }),
+  },
+  {
     id: "launch",
     label: "Launch promo",
     emoji: "🚀",
@@ -312,6 +375,15 @@ interface R {
   ctx: RenderContext;
 }
 
+/**
+ * A single-line text field. In the editor preview it's tagged so it can be edited
+ * in place (unless it contains {name}, which would otherwise get baked in).
+ */
+function ed(r: R, field: string, value: string) {
+  if (r.ctx.preview && !value.includes("{name}")) return `<span data-f="${field}">${escapeHtml(value)}</span>`;
+  return escapeHtml(personalise(value, r.name));
+}
+
 const p = (r: R, s: string) => personalise(s, r.name);
 const rich = (r: R, s: string, o: { color?: string; size?: number; align?: "left" | "center" } = {}) =>
   renderRichText(p(r, s), r.site, { color: o.color ?? r.t.text, strong: r.t.heading, link: r.t.accent, size: o.size, align: o.align });
@@ -328,9 +400,10 @@ function button(r: R, label: string, href: string, opts: { invert?: boolean; out
 <a href="${escapeHtml(url)}" style="${style}">${escapeHtml(label)}&nbsp;→</a></td></tr></table>`;
 }
 
-function img(r: R, src: string, width: number, extra = "") {
+function img(r: R, src: string, width: number, extra = "", field = "imageUrl") {
   const url = safeUrl(src, r.site);
-  return url ? `<img src="${escapeHtml(url)}" width="${width}" alt="" style="display:block;width:100%;max-width:${width}px;height:auto;border:0;${extra}">` : "";
+  const tag = r.ctx.preview ? ` data-img="${field}" title="Drop a photo here to replace it"` : "";
+  return url ? `<img src="${escapeHtml(url)}"${tag} width="${width}" alt="" style="display:block;width:100%;max-width:${width}px;height:auto;border:0;${extra}">` : "";
 }
 
 const row = (inner: string, pad = "0 32px 28px") => `<tr><td class="px" style="padding:${pad}">${inner}</td></tr>`;
@@ -342,12 +415,12 @@ function renderBlock(r: R, block: EmailBlock): string {
       const center = block.align !== "left";
       const a = center ? "center" : "left";
       const pill = block.eyebrow.trim()
-        ? `<tr><td align="${a}" style="padding:10px 32px 18px"><span style="display:inline-block;padding:8px 16px;border:1px solid ${t.accent};border-radius:999px;font:800 11px/1 ${MONO};letter-spacing:2.5px;text-transform:uppercase;color:${t.accent}">${escapeHtml(p(r, block.eyebrow))}</span></td></tr>`
+        ? `<tr><td align="${a}" style="padding:10px 32px 18px"><span style="display:inline-block;padding:8px 16px;border:1px solid ${t.accent};border-radius:999px;font:800 11px/1 ${MONO};letter-spacing:2.5px;text-transform:uppercase;color:${t.accent}">${ed(r, "eyebrow", block.eyebrow)}</span></td></tr>`
         : "";
-      const accent = block.accentLine.trim() ? `<br><span style="color:${t.accent}">${escapeHtml(p(r, block.accentLine))}</span>` : "";
+      const accent = block.accentLine.trim() ? `<br><span style="color:${t.accent}">${ed(r, "accentLine", block.accentLine)}</span>` : "";
       const picture = img(r, block.imageUrl, 600);
       return `${pill}
-<tr><td align="${a}" class="px h1" style="padding:0 32px;font:900 58px/1 ${FONT};letter-spacing:-2px;color:${t.heading};text-align:${a}">${escapeHtml(p(r, block.headline))}${accent}</td></tr>
+<tr><td align="${a}" class="px h1" style="padding:0 32px;font:900 58px/1 ${FONT};letter-spacing:-2px;color:${t.heading};text-align:${a}">${ed(r, "headline", block.headline)}${accent}</td></tr>
 ${block.text.trim() ? `<tr><td class="px" style="padding:22px ${center ? 52 : 32}px 4px">${rich(r, block.text, { color: t.muted, size: 18, align: a })}</td></tr>` : ""}
 ${button(r, block.buttonLabel, block.buttonUrl) ? `<tr><td class="px" style="padding:10px 32px 6px">${button(r, block.buttonLabel, block.buttonUrl, { align: a })}</td></tr>` : ""}
 ${picture ? `<tr><td style="padding:22px 0 26px">${picture}</td></tr>` : `<tr><td style="height:30px"></td></tr>`}`;
@@ -358,12 +431,12 @@ ${picture ? `<tr><td style="padding:22px 0 26px">${picture}</td></tr>` : `<tr><t
       if (!picture) return "";
       const link = safeUrl(block.linkUrl, r.site);
       if (link) picture = `<a href="${escapeHtml(link)}">${picture}</a>`;
-      const caption = block.caption.trim() ? `<div style="padding-top:10px;font:13px/1.5 ${FONT};color:${t.muted};text-align:center">${escapeHtml(p(r, block.caption))}</div>` : "";
+      const caption = block.caption.trim() ? `<div style="padding-top:10px;font:13px/1.5 ${FONT};color:${t.muted};text-align:center">${ed(r, "caption", block.caption)}</div>` : "";
       return full ? `<tr><td style="padding:0 0 28px">${picture}${caption ? `<div class="px" style="padding:0 32px">${caption}</div>` : ""}</td></tr>` : row(picture + caption);
     }
     case "text": {
       const a = block.align === "center" ? "center" : "left";
-      const inner = `${block.heading.trim() ? `<div style="font:900 28px/1.15 ${FONT};letter-spacing:-0.7px;color:${t.heading};padding-bottom:12px;text-align:${a}">${escapeHtml(p(r, block.heading))}</div>` : ""}${rich(r, block.body, { align: a })}`;
+      const inner = `${block.heading.trim() ? `<div style="font:900 28px/1.15 ${FONT};letter-spacing:-0.7px;color:${t.heading};padding-bottom:12px;text-align:${a}">${ed(r, "heading", block.heading)}</div>` : ""}${rich(r, block.body, { align: a })}`;
       return block.boxed
         ? row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${t.surface}" style="background:${t.surface};border:1px solid ${t.line};border-radius:20px"><tr><td style="padding:26px 26px 12px">${inner}</td></tr></table>`, "0 32px 22px")
         : row(inner);
@@ -411,8 +484,8 @@ ${w.open && w.left > 0 ? `<tr><td align="center" style="padding:0 24px 8px">${bu
 </table></td></tr>`;
     }
     case "feature": {
-      const eyebrow = block.eyebrow.trim() ? `<div style="font:800 13px/1 ${MONO};letter-spacing:2px;color:${t.accent};padding-bottom:10px;text-transform:uppercase">${escapeHtml(p(r, block.eyebrow))}</div>` : "";
-      const title = block.title.trim() ? `<div style="font:900 26px/1.15 ${FONT};letter-spacing:-0.6px;color:${t.heading};padding-bottom:12px">${escapeHtml(p(r, block.title))}</div>` : "";
+      const eyebrow = block.eyebrow.trim() ? `<div style="font:800 13px/1 ${MONO};letter-spacing:2px;color:${t.accent};padding-bottom:10px;text-transform:uppercase">${ed(r, "eyebrow", block.eyebrow)}</div>` : "";
+      const title = block.title.trim() ? `<div style="font:900 26px/1.15 ${FONT};letter-spacing:-0.6px;color:${t.heading};padding-bottom:12px">${ed(r, "title", block.title)}</div>` : "";
       const btn = button(r, block.buttonLabel, block.buttonUrl, { outline: true, align: "left" });
       const text = `${eyebrow}${title}${rich(r, block.body)}${btn ? `<div style="padding-top:4px">${btn}</div>` : ""}`;
       const picture = img(r, block.imageUrl, 230, `border-radius:20px;border:1px solid ${t.line}`);
@@ -428,11 +501,12 @@ ${w.open && w.left > 0 ? `<tr><td align="center" style="padding:0 24px 8px">${bu
       const colW = cols === 2 ? 268 : 178;
       const cards = items
         .map((it) => {
+          const gi = block.items.indexOf(it);
           const link = safeUrl(it.linkUrl, r.site);
-          let picture = img(r, it.imageUrl, colW - 20, "border-radius:14px");
+          let picture = img(r, it.imageUrl, colW - 20, "border-radius:14px", `items.${gi}.imageUrl`);
           if (picture && link) picture = `<a href="${escapeHtml(link)}">${picture}</a>`;
           return `<div class="col" style="display:inline-block;width:100%;max-width:${colW}px;vertical-align:top;text-align:left"><div style="margin:6px;padding:10px 10px 4px;border-radius:18px;background:${t.surface};border:1px solid ${t.line}">
-${picture}${it.title.trim() ? `<div style="padding:12px 4px 4px;font:800 18px/1.2 ${FONT};color:${t.heading}">${escapeHtml(p(r, it.title))}</div>` : ""}
+${picture}${it.title.trim() ? `<div style="padding:12px 4px 4px;font:800 18px/1.2 ${FONT};color:${t.heading}">${ed(r, `items.${gi}.title`, it.title)}</div>` : ""}
 ${it.body.trim() ? `<div style="padding:0 4px 8px">${rich(r, it.body, { size: 14, color: t.muted })}</div>` : ""}</div></div>`;
         })
         .join("");
@@ -445,22 +519,22 @@ ${it.body.trim() ? `<div style="padding:0 4px 8px">${rich(r, it.body, { size: 14
       const border = block.style === "outline" ? `border:2px solid ${t.accent};` : block.style === "surface" ? `border:1px solid ${t.line};` : "";
       return row(
         `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" ${bg !== "transparent" ? `bgcolor="${bg}"` : ""} style="background:${bg};${border}border-radius:24px">
-${block.kicker.trim() ? `<tr><td align="center" style="padding:28px 20px 4px;font:800 12px/1 ${MONO};letter-spacing:3px;text-transform:uppercase;color:${kick}">${escapeHtml(p(r, block.kicker))}</td></tr>` : `<tr><td style="height:24px"></td></tr>`}
-<tr><td align="center" class="h1" style="padding:8px 20px 30px;font:900 56px/1.02 ${FONT};letter-spacing:-2px;color:${fg}">${escapeHtml(p(r, block.text))}</td></tr></table>`,
+${block.kicker.trim() ? `<tr><td align="center" style="padding:28px 20px 4px;font:800 12px/1 ${MONO};letter-spacing:3px;text-transform:uppercase;color:${kick}">${ed(r, "kicker", block.kicker)}</td></tr>` : `<tr><td style="height:24px"></td></tr>`}
+<tr><td align="center" class="h1" style="padding:8px 20px 30px;font:900 56px/1.02 ${FONT};letter-spacing:-2px;color:${fg}">${ed(r, "text", block.text)}</td></tr></table>`,
         "0 24px 28px",
       );
     }
     case "quote":
       return row(
         `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-left:4px solid ${t.accent};padding:4px 0 4px 22px">
-<div style="font:800 24px/1.35 ${FONT};letter-spacing:-0.4px;color:${t.heading}">“${escapeHtml(p(r, block.quote))}”</div>
-${block.who.trim() ? `<div style="padding-top:12px;font:700 12px/1 ${MONO};letter-spacing:2px;text-transform:uppercase;color:${t.accent}">— ${escapeHtml(p(r, block.who))}</div>` : ""}</td></tr></table>`,
+<div style="font:800 24px/1.35 ${FONT};letter-spacing:-0.4px;color:${t.heading}">“${ed(r, "quote", block.quote)}”</div>
+${block.who.trim() ? `<div style="padding-top:12px;font:700 12px/1 ${MONO};letter-spacing:2px;text-transform:uppercase;color:${t.accent}">— ${ed(r, "who", block.who)}</div>` : ""}</td></tr></table>`,
         "4px 40px 32px",
       );
     case "cta":
       return row(
         `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${t.surface}" style="background:${t.surface};border:2px solid ${t.accent};border-radius:28px">
-${block.headline.trim() ? `<tr><td align="center" style="padding:38px 28px 10px;font:900 38px/1.05 ${FONT};letter-spacing:-1.2px;color:${t.heading}">${escapeHtml(p(r, block.headline))}</td></tr>` : `<tr><td style="height:26px"></td></tr>`}
+${block.headline.trim() ? `<tr><td align="center" style="padding:38px 28px 10px;font:900 38px/1.05 ${FONT};letter-spacing:-1.2px;color:${t.heading}">${ed(r, "headline", block.headline)}</td></tr>` : `<tr><td style="height:26px"></td></tr>`}
 ${block.text.trim() ? `<tr><td align="center" style="padding:4px 36px 10px">${rich(r, block.text, { color: t.muted, align: "center" })}</td></tr>` : ""}
 ${button(r, block.buttonLabel, block.buttonUrl) ? `<tr><td align="center" style="padding:8px 28px 38px">${button(r, block.buttonLabel, block.buttonUrl)}</td></tr>` : `<tr><td style="height:26px"></td></tr>`}</table>`,
         "6px 24px 34px",
@@ -539,7 +613,12 @@ export function renderNewsletter(c: NewsletterContent, ctx: RenderContext): { su
   }${ctx.preview ? `
   [data-bid]{cursor:pointer;outline-offset:-3px}
   [data-bid]:hover{outline:2px dashed ${t.accent}}
-  [data-bid].is-sel{outline:3px solid ${t.accent}}` : ""}
+  [data-bid].is-sel{outline:3px solid ${t.accent}}
+  [data-f]{border-radius:4px;outline:none}
+  [data-f]:hover{background:rgba(127,127,127,.22);cursor:text}
+  [data-f]:focus{background:rgba(127,127,127,.28);box-shadow:0 0 0 2px ${t.accent}}
+  img[data-img]:hover{outline:3px dashed ${t.accent};outline-offset:-3px}
+  img[data-img].is-drop{outline:4px solid ${t.accent};filter:brightness(1.2)}` : ""}
 </style></head>
 <body style="margin:0;padding:0;background:${t.bg}" bgcolor="${t.bg}">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${t.bg}">${escapeHtml(personalise(c.preheader, ctx.name))}${"&#8204;&nbsp;".repeat(40)}</div>
@@ -666,4 +745,135 @@ function upgradeV1(r: Record<string, unknown>): unknown[] {
   });
   if (r.closingHeadline || r.closingText) out.push({ type: "cta", headline: r.closingHeadline ?? "", text: r.closingText ?? "", buttonLabel: r.ctaLabel ?? "", buttonUrl: r.ctaUrl ?? "" });
   return out;
+}
+
+/* --------------------------------------------------------------- quick drop */
+
+/** The fast way: a few answers become a fully designed email. */
+export interface QuickDrop {
+  theme: ThemeId;
+  style: "hype" | "update" | "spotlight";
+  headline: string;
+  accentLine: string;
+  intro: string;
+  items: { title: string; text: string; imageUrl: string }[];
+  showSpots: boolean;
+  showNumbers: boolean;
+  cta: "waitlist" | "build" | "demo" | "film" | "none";
+}
+
+export const QUICK_STYLES: { id: QuickDrop["style"]; emoji: string; label: string; hint: string }[] = [
+  { id: "hype", emoji: "🚀", label: "Hype", hint: "Big hero, features side by side" },
+  { id: "update", emoji: "🔧", label: "Update", hint: "Clean cards, easy to read" },
+  { id: "spotlight", emoji: "🎮", label: "Spotlight", hint: "Huge banner and picture cards" },
+];
+
+export const QUICK_CTAS: { id: QuickDrop["cta"]; label: string; url: string }[] = [
+  { id: "waitlist", label: "Reserve my spot", url: "/#waitlist" },
+  { id: "build", label: "Build yours", url: "/#build" },
+  { id: "demo", label: "Play the demo", url: "/#games" },
+  { id: "film", label: "Watch the film", url: "/#film" },
+  { id: "none", label: "No button", url: "" },
+];
+
+export const QUICK_DEFAULT: QuickDrop = {
+  theme: "midnight",
+  style: "hype",
+  headline: "This week on the bench.",
+  accentLine: "",
+  intro: "Hi {name}! Here's what's new with the Hackulator.",
+  items: [
+    { title: "", text: "", imageUrl: "" },
+    { title: "", text: "", imageUrl: "" },
+  ],
+  showSpots: true,
+  showNumbers: false,
+  cta: "waitlist",
+};
+
+const DEFAULT_ART = ["/email/snake.png", "/email/2048.png", "/email/tetris.png", "/email/colours.png"];
+const STYLE_EMOJI = { hype: "🚀", update: "🔧", spotlight: "🎮" } as const;
+
+export function buildQuickDrop(q: QuickDrop): NewsletterContent {
+  const items = q.items.filter((i) => i.title.trim() || i.text.trim()).slice(0, 4);
+  const cta = QUICK_CTAS.find((c) => c.id === q.cta) ?? QUICK_CTAS[0];
+  const btn = cta.id === "none" ? { label: "", url: "" } : { label: cta.label, url: cta.url };
+  const headline = q.headline.trim() || "This week on the bench.";
+  const blocks: EmailBlock[] = [];
+  const numbers = b("stats", { items: [{ value: "3", label: "games included" }, { value: "8", label: "cover colours" }, { value: "8", label: "cover icons" }, { value: "£5", label: "Custom UI" }] });
+
+  if (q.style === "spotlight") {
+    blocks.push(b("banner", { kicker: "The Weekly Drop", text: [headline, q.accentLine].filter((x) => x.trim()).join(" "), style: "accent" }));
+    const lead = items.find((i) => i.imageUrl)?.imageUrl || "/email/hero.jpg";
+    blocks.push(b("image", { imageUrl: lead, width: "inset", caption: "", linkUrl: btn.url }));
+    if (q.intro.trim()) blocks.push(b("text", { heading: "", body: q.intro, align: "center" }));
+    if (q.showNumbers) blocks.push(numbers);
+    if (items.length) {
+      blocks.push(
+        b("grid", {
+          columns: items.length === 2 || items.length === 4 ? 2 : 3,
+          items: items.map((it, i) => ({ imageUrl: it.imageUrl || DEFAULT_ART[i % DEFAULT_ART.length], title: it.title, body: it.text, linkUrl: "" })),
+        }),
+      );
+    }
+    if (q.showSpots) blocks.push(b("waitlist", { style: "surface" }));
+    if (btn.label) blocks.push(b("button", { label: btn.label, url: btn.url, style: "solid" }));
+  } else if (q.style === "update") {
+    blocks.push(b("hero", { eyebrow: "The Weekly Drop", headline, accentLine: q.accentLine, text: q.intro, buttonLabel: "", buttonUrl: "", imageUrl: "", align: "left" }));
+    if (q.showNumbers) blocks.push(numbers);
+    items.forEach((it, i) => {
+      if (it.imageUrl) blocks.push(b("feature", { eyebrow: String(i + 1).padStart(2, "0"), title: it.title, body: it.text, imageUrl: it.imageUrl, imageSide: i % 2 ? "right" : "left" }));
+      else blocks.push(b("text", { heading: it.title, body: it.text, boxed: true }));
+    });
+    if (q.showSpots) blocks.push(b("waitlist", { style: "surface" }));
+    if (btn.label) blocks.push(b("cta", { headline: "Want one?", text: "Design yours and see the price as you go. No payment is taken on the site.", buttonLabel: btn.label, buttonUrl: btn.url }));
+  } else {
+    blocks.push(b("hero", { eyebrow: "The Weekly Drop", headline, accentLine: q.accentLine, text: q.intro, buttonLabel: btn.label, buttonUrl: btn.url, imageUrl: "/email/hero.jpg", align: "center" }));
+    if (q.showNumbers) blocks.push(numbers);
+    if (q.showSpots) blocks.push(b("waitlist", { style: "accent" }));
+    items.forEach((it, i) =>
+      blocks.push(
+        b("feature", {
+          eyebrow: String(i + 1).padStart(2, "0"),
+          title: it.title,
+          body: it.text,
+          imageUrl: it.imageUrl || DEFAULT_ART[i % DEFAULT_ART.length],
+          imageSide: i % 2 ? "right" : "left",
+        }),
+      ),
+    );
+    if (btn.label) blocks.push(b("cta", { headline: "Be one of the first.", text: "Joining the waitlist is free with no obligation to buy.", buttonLabel: btn.label, buttonUrl: btn.url }));
+  }
+
+  const first = items[0];
+  return {
+    version: 2,
+    subject: `${[headline, q.accentLine].filter((x) => x.trim()).join(" ").replace(/[.!]+$/, "")} ${STYLE_EMOJI[q.style]}`,
+    preheader: plainText(first ? [first.title, first.text].filter((x) => x.trim()).join(": ") : q.intro)
+      .replace(/\{name\}/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 150),
+    theme: q.theme,
+    blocks,
+  };
+}
+
+export function sanitizeQuickDrop(raw: unknown): QuickDrop {
+  const r = obj(raw);
+  const items = (Array.isArray(r.items) ? r.items : QUICK_DEFAULT.items).slice(0, 4).map((i) => {
+    const o = obj(i);
+    return { title: str(o.title, 100), text: str(o.text, 600, true), imageUrl: str(o.imageUrl, 500) };
+  });
+  return {
+    theme: THEME_IDS.includes(r.theme as ThemeId) ? (r.theme as ThemeId) : QUICK_DEFAULT.theme,
+    style: pick(r.style, ["hype", "update", "spotlight"] as const, QUICK_DEFAULT.style),
+    headline: typeof r.headline === "string" ? str(r.headline, 80) : QUICK_DEFAULT.headline,
+    accentLine: str(r.accentLine, 80),
+    intro: typeof r.intro === "string" ? str(r.intro, 600, true) : QUICK_DEFAULT.intro,
+    items,
+    showSpots: r.showSpots !== false,
+    showNumbers: r.showNumbers === true,
+    cta: pick(r.cta, ["waitlist", "build", "demo", "film", "none"] as const, QUICK_DEFAULT.cta),
+  };
 }

@@ -962,12 +962,13 @@ a.a-row:hover {
 }
 .eb__tabs button {
   flex: 1;
+  white-space: nowrap;
   border: 0;
   background: transparent;
-  padding: 8px 6px;
+  padding: 8px 4px;
   border-radius: 9px;
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   color: var(--muted);
@@ -1310,4 +1311,165 @@ a.a-row:hover {
   height: calc((100vh - 230px) / var(--eb-scale, 1));
   min-height: 560px;
   background: #fff;
+}
+
+/* Quick Drop */
+.eb__quickdrop {
+  display: grid;
+  gap: 16px;
+}
+.eb__qd-lead {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f7fde6;
+  border: 1px solid #c9e98a;
+  font-size: 14px;
+}
+.eb__quickdrop .a-field > span:first-child {
+  font-weight: 800;
+}
+.eb__quickdrop textarea,
+.eb__quickdrop input {
+  font: inherit;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  width: 100%;
+  min-width: 0;
+}
+.eb__quickdrop textarea {
+  resize: vertical;
+}
+.eb__qd-themes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.eb__qd-themes button {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--line);
+}
+.eb__qd-themes i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+.eb__qd-styles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.eb__qd-styles button {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  text-align: left;
+  padding: 10px;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.eb__qd-styles button span {
+  font-size: 22px;
+}
+.eb__qd-styles button small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.eb__qd-styles button[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: #f7fde6;
+}
+.eb__qd-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 84px;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.eb__qd-item-text {
+  display: grid;
+  gap: 6px;
+}
+.eb__qd-photo {
+  position: relative;
+}
+.eb__qd-photo-btn {
+  width: 84px;
+  height: 84px;
+  border-radius: 10px;
+  border: 2px dashed var(--line-strong);
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0;
+}
+.eb__qd-photo-btn.is-over {
+  border-color: #8fb820;
+  background: #f7fde6;
+}
+.eb__qd-photo-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.eb__qd-pop {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  top: 90px;
+  width: 340px;
+  padding: 10px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.45);
+}
+.eb__qd-x {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  font-size: 11px;
+  cursor: pointer;
+}
+.eb__quick button[aria-pressed="true"] {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+.eb__qd-go {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.eb__qd-live {
+  color: #3d7a14;
+  font-weight: 700;
+  font-size: 14px;
 }

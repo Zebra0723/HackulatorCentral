@@ -6,13 +6,19 @@ import {
   EMAIL_IMAGES,
   NEWSLETTER_LIMITS as L,
   NEWSLETTER_PRESETS,
+  QUICK_CTAS,
+  QUICK_DEFAULT,
+  QUICK_STYLES,
   THEMES,
+  buildQuickDrop,
   createBlock,
   newBlockId,
   renderNewsletter,
+  sanitizeQuickDrop,
   type BlockType,
   type EmailBlock,
   type NewsletterContent,
+  type QuickDrop,
   type ThemeId,
 } from "@/lib/email/newsletter";
 import { Feedback, useApi } from "./useApi";
@@ -32,7 +38,18 @@ export interface UploadedImage {
   url: string;
 }
 
-type Tab = "content" | "add" | "theme" | "templates";
+type Tab = "quick" | "content" | "add" | "theme" | "templates";
+
+const QUICK_KEY = "hackulator.quickDrop";
+
+/** Set a field on a block; "items.2.title" reaches into a list. */
+function setPath(block: EmailBlock, path: string, value: string): EmailBlock {
+  const [head, idx, leaf] = path.split(".");
+  if (leaf === undefined) return { ...block, [head]: value } as EmailBlock;
+  const list = (block as unknown as Record<string, unknown>)[head];
+  if (!Array.isArray(list)) return block;
+  return { ...block, [head]: list.map((x, i) => (i === Number(idx) ? { ...x, [leaf]: value } : x)) } as EmailBlock;
+}
 
 /* ------------------------------------------------------------ undo history */
 
@@ -91,7 +108,10 @@ export function MailingComposer({
   images: UploadedImage[];
 }) {
   const { doc, update, undo, redo, canUndo, canRedo } = useHistory(initial);
-  const [tab, setTab] = useState<Tab>("content");
+  const [tab, setTab] = useState<Tab>("quick");
+  const [quick, setQuick] = useState<QuickDrop>(QUICK_DEFAULT);
+  const lastQuick = useRef<NewsletterContent | null>(null);
+  const customSubject = useRef(false);
   const [selected, setSelected] = useState<string | null>(initial.blocks[0]?.id ?? null);
   const [width, setWidth] = useState<"desktop" | "phone">("desktop");
   const [previewName, setPreviewName] = useState("Ada");
@@ -168,6 +188,46 @@ export function MailingComposer({
   };
   const remove = (id: string) => update((d) => ({ ...d, blocks: d.blocks.filter((x) => x.id !== id) }), false);
 
+  /* Quick Drop: answers → whole email, live, until blocks are edited by hand */
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(QUICK_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-off restore of this browser's Quick Drop answers
+      if (saved) setQuick(sanitizeQuickDrop(JSON.parse(saved)));
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
+  const linked = lastQuick.current !== null && lastQuick.current.blocks === doc.blocks && lastQuick.current.theme === doc.theme;
+  const applyQuick = (q: QuickDrop) => {
+    const next = buildQuickDrop(q);
+    update((d) => {
+      const built = customSubject.current ? { ...next, subject: d.subject, preheader: d.preheader } : next;
+      lastQuick.current = built;
+      return built;
+    });
+  };
+  const changeQuick = (patch: Partial<QuickDrop>) => {
+    const q = { ...quick, ...patch };
+    setQuick(q);
+    try {
+      localStorage.setItem(QUICK_KEY, JSON.stringify(q));
+    } catch {
+      /* storage unavailable */
+    }
+    if (linked) applyQuick(q);
+  };
+
+  /* In-place editing and photo drops inside the preview */
+  const patchPath = (id: string, path: string, value: string) =>
+    update((d) => ({ ...d, blocks: d.blocks.map((x) => (x.id === id ? setPath(x, path, value) : x)) }), false);
+  const patchRef = useRef(patchPath);
+  const uploadRef = useRef<(f: File) => Promise<string | null>>(async () => null);
+  useEffect(() => {
+    patchRef.current = patchPath;
+    uploadRef.current = uploadImage;
+  });
+
   /* preview */
   const html = useMemo(
     () => renderNewsletter(doc, { siteUrl, unsubscribeUrl: "#unsubscribe", issueNumber, date: new Date(), name: previewName, waitlist, preview: {} }).html,
@@ -198,6 +258,47 @@ export function MailingComposer({
       e.preventDefault();
       const el = (e.target as HTMLElement).closest("[data-bid]");
       if (el) selectRef.current(el.getAttribute("data-bid"));
+    });
+    // Type straight onto the email: single-line text commits on Enter or when you click away.
+    d.querySelectorAll<HTMLElement>("[data-f]").forEach((el) => {
+      el.contentEditable = "plaintext-only";
+      if (el.contentEditable !== "plaintext-only") el.contentEditable = "true";
+      el.spellcheck = true;
+      const before = el.textContent ?? "";
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          el.blur();
+        }
+        if (e.key === "Escape") {
+          el.textContent = before;
+          el.blur();
+        }
+      });
+      el.addEventListener("blur", () => {
+        const text = (el.textContent ?? "").replace(/\s+/g, " ").trim();
+        const bid = el.closest("[data-bid]")?.getAttribute("data-bid");
+        if (bid && text !== before) patchRef.current(bid, el.dataset.f!, text);
+      });
+    });
+    // Drop a photo onto any picture to replace it.
+    d.addEventListener("dragover", (e) => {
+      const im = (e.target as HTMLElement).closest?.("img[data-img]");
+      d.querySelectorAll(".is-drop").forEach((x) => x !== im && x.classList.remove("is-drop"));
+      if (im && e.dataTransfer?.types.includes("Files")) {
+        e.preventDefault();
+        im.classList.add("is-drop");
+      }
+    });
+    d.addEventListener("drop", async (e) => {
+      const im = (e.target as HTMLElement).closest?.("img[data-img]") as HTMLElement | null;
+      const file = e.dataTransfer?.files?.[0];
+      if (!im || !file) return;
+      e.preventDefault();
+      const bid = im.closest("[data-bid]")?.getAttribute("data-bid");
+      const field = im.getAttribute("data-img");
+      const url = await uploadRef.current(file);
+      if (url && bid && field) patchRef.current(bid, field, url);
     });
     markSelected(selected);
   };
@@ -248,7 +349,7 @@ export function MailingComposer({
         <div className="eb__inbox">
           <label className="a-field">
             <span>Subject line</span>
-            <input value={doc.subject} maxLength={L.subject} onChange={(e) => setField("subject", e.target.value)} placeholder="Your calculator is about to get a lot more fun 🎮" />
+            <input value={doc.subject} maxLength={L.subject} onChange={(e) => { customSubject.current = true; setField("subject", e.target.value); }} placeholder="Your calculator is about to get a lot more fun 🎮" />
           </label>
           <label className="a-field">
             <span>Preview text</span>
@@ -292,6 +393,7 @@ export function MailingComposer({
           <div className="eb__tabs" role="tablist">
             {(
               [
+                ["quick", "⚡ Quick"],
                 ["content", `Blocks (${doc.blocks.length})`],
                 ["add", "+ Add"],
                 ["theme", "Theme"],
@@ -303,6 +405,20 @@ export function MailingComposer({
               </button>
             ))}
           </div>
+
+          {tab === "quick" && (
+            <QuickPanel
+              q={quick}
+              linked={linked}
+              onChange={changeQuick}
+              onBuild={() => {
+                if (doc.blocks.length && !linked && !window.confirm("Build the email from these answers? It replaces the current blocks (Undo brings them back).")) return;
+                applyQuick(quick);
+              }}
+              onFineTune={() => setTab("content")}
+              imageCtx={imageCtx}
+            />
+          )}
 
           {tab === "content" && (
             <Layers
@@ -404,7 +520,7 @@ export function MailingComposer({
         <div className="eb__preview">
           <div className="a-inline a-wrap eb__bar">
             <strong>Live preview</strong>
-            <span className="a-muted small">Click anything to edit it</span>
+            <span className="a-muted small">Type on headlines to edit them · click a block for more · drop a photo on a picture</span>
             <div className="a-seg" role="group" aria-label="Preview width">
               <button type="button" aria-pressed={width === "desktop"} onClick={() => setWidth("desktop")}>🖥 Desktop</button>
               <button type="button" aria-pressed={width === "phone"} onClick={() => setWidth("phone")}>📱 Phone</button>
@@ -607,8 +723,8 @@ const QUICK_LINKS: [string, string][] = [
   ["/", "Homepage"],
 ];
 
-function ImageField({ label, value, onChange, ctx }: { label: string; value: string; onChange: (v: string) => void; ctx: ImageCtx }) {
-  const [open, setOpen] = useState(false);
+function ImageField({ label, value, onChange, ctx, defaultOpen = false }: { label: string; value: string; onChange: (v: string) => void; ctx: ImageCtx; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const all = [...EMAIL_IMAGES.map((i) => ({ url: i.url as string, name: i.label as string })), ...ctx.images.map((i) => ({ url: i.url, name: i.name || "Uploaded" }))];
@@ -849,5 +965,141 @@ export function SubscriberList({ rows }: { rows: SubscriberRow[] }) {
         ))}
       </ul>
     </>
+  );
+}
+
+/* --------------------------------------------------------------- quick drop */
+
+function QuickPanel({
+  q,
+  linked,
+  onChange,
+  onBuild,
+  onFineTune,
+  imageCtx,
+}: {
+  q: QuickDrop;
+  linked: boolean;
+  onChange: (patch: Partial<QuickDrop>) => void;
+  onBuild: () => void;
+  onFineTune: () => void;
+  imageCtx: ImageCtx;
+}) {
+  const setItem = (i: number, patch: Partial<QuickDrop["items"][number]>) => onChange({ items: q.items.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+  return (
+    <div className="eb__quickdrop">
+      <p className="eb__qd-lead">
+        <strong>Answer a few things and your email designs itself.</strong> {linked ? "The preview updates as you type." : ""}
+      </p>
+
+      <div className="a-field">
+        <span>1. Pick a vibe</span>
+        <div className="eb__qd-themes">
+          {(Object.keys(THEMES) as ThemeId[]).map((id) => (
+            <button key={id} type="button" title={THEMES[id].name} aria-label={THEMES[id].name} aria-pressed={q.theme === id} onClick={() => onChange({ theme: id })} style={{ background: THEMES[id].bg, borderColor: q.theme === id ? THEMES[id].accent : "transparent" }}>
+              <i style={{ background: THEMES[id].accent }} />
+            </button>
+          ))}
+          <span className="a-muted small">{THEMES[q.theme].name}</span>
+        </div>
+        <div className="eb__qd-styles">
+          {QUICK_STYLES.map((st) => (
+            <button key={st.id} type="button" aria-pressed={q.style === st.id} onClick={() => onChange({ style: st.id })}>
+              <span aria-hidden="true">{st.emoji}</span>
+              <strong>{st.label}</strong>
+              <small>{st.hint}</small>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="a-field">
+        <span>2. Headline</span>
+        <div className="a-grid2">
+          <input value={q.headline} maxLength={80} placeholder="This week on the bench." onChange={(e) => onChange({ headline: e.target.value })} aria-label="Headline" />
+          <input value={q.accentLine} maxLength={80} placeholder="Second line (optional, in colour)" onChange={(e) => onChange({ accentLine: e.target.value })} aria-label="Second line" />
+        </div>
+        <textarea rows={2} value={q.intro} maxLength={600} placeholder="A sentence to start. {name} = their first name." onChange={(e) => onChange({ intro: e.target.value })} aria-label="Intro" />
+      </div>
+
+      <div className="a-field">
+        <span>3. What&apos;s new? <em>(up to 4)</em></span>
+        {q.items.map((it, i) => (
+          <div key={i} className="eb__qd-item">
+            <div className="eb__qd-item-text">
+              <input value={it.title} maxLength={100} placeholder={["Built the new screen", "Snake got faster", "Prototype 2 on the bench", "Sneak peek"][i]} onChange={(e) => setItem(i, { title: e.target.value })} aria-label={`News ${i + 1} title`} />
+              <textarea rows={2} value={it.text} maxLength={600} placeholder="A line or two about it. **bold** works." onChange={(e) => setItem(i, { text: e.target.value })} aria-label={`News ${i + 1} text`} />
+            </div>
+            <QuickPhoto value={it.imageUrl} onChange={(v) => setItem(i, { imageUrl: v })} ctx={imageCtx} />
+            {q.items.length > 1 && (
+              <button type="button" className="eb__qd-x" aria-label={`Remove news ${i + 1}`} onClick={() => onChange({ items: q.items.filter((_, j) => j !== i) })}>✕</button>
+            )}
+          </div>
+        ))}
+        {q.items.length < 4 && (
+          <button type="button" className="a-btn a-btn--sm" onClick={() => onChange({ items: [...q.items, { title: "", text: "", imageUrl: "" }] })}>+ Add another</button>
+        )}
+      </div>
+
+      <div className="a-field">
+        <span>4. Extras</span>
+        <label className="a-check"><input type="checkbox" checked={q.showSpots} onChange={(e) => onChange({ showSpots: e.target.checked })} /> 🔥 Live &ldquo;spots left&rdquo; counter</label>
+        <label className="a-check"><input type="checkbox" checked={q.showNumbers} onChange={(e) => onChange({ showNumbers: e.target.checked })} /> 🔢 Big numbers (3 games · 8 colours · 8 icons · £5 UI)</label>
+        <div className="eb__quick">
+          {QUICK_CTAS.map((c) => (
+            <button key={c.id} type="button" aria-pressed={q.cta === c.id} onClick={() => onChange({ cta: c.id })}>{c.label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="eb__qd-go">
+        {linked ? (
+          <>
+            <span className="eb__qd-live">● Live: changes show in the preview</span>
+            <button type="button" className="a-btn a-btn--sm" onClick={onFineTune}>Fine-tune blocks →</button>
+          </>
+        ) : (
+          <button type="button" className="a-btn a-btn--primary" onClick={onBuild}>✨ Build my email</button>
+        )}
+      </div>
+      {!linked && <small className="a-muted">Already edited the blocks by hand? Building again replaces them (Undo brings them back).</small>}
+    </div>
+  );
+}
+
+function QuickPhoto({ value, onChange, ctx }: { value: string; onChange: (v: string) => void; ctx: ImageCtx }) {
+  const [open, setOpen] = useState(false);
+  const [over, setOver] = useState(false);
+  return (
+    <div className="eb__qd-photo">
+      <button
+        type="button"
+        className={`eb__qd-photo-btn${over ? " is-over" : ""}`}
+        onClick={() => setOpen((o) => !o)}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={async (e) => {
+          e.preventDefault();
+          setOver(false);
+          const f = e.dataTransfer.files?.[0];
+          if (f) {
+            const url = await ctx.upload(f);
+            if (url) onChange(url);
+          }
+        }}
+        title="Click to choose, or drop a photo"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- admin thumbnail of an email picture */}
+        {value ? <img src={value} alt="" /> : <span>📷<br />Photo</span>}
+      </button>
+      {open && (
+        <div className="eb__qd-pop">
+          <ImageField label="Picture" value={value} onChange={(v) => { onChange(v); setOpen(false); }} ctx={ctx} defaultOpen />
+        </div>
+      )}
+    </div>
   );
 }
