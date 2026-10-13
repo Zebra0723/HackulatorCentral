@@ -36,6 +36,8 @@ const ACTION_TEXT: Record<string, string> = {
   "waitlist.newid": "Waitlist: new ID issued",
   "settings.update": "Site settings changed",
   "enquiry.email_failed": "Order email not sent",
+  "mailing.send": "Weekly Drop sent",
+  "mailing.remove": "Subscriber deleted",
 };
 
 export default async function AdminHome() {

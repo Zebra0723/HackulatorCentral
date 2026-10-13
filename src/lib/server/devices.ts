@@ -211,6 +211,8 @@ export async function exportAll(db: Db) {
     releases: await q("select * from software_releases order by id"),
     waitlist: await q("select * from waitlist order by position"),
     siteSettings: await q("select * from site_settings order by key"),
+    mailingList: await q("select id, email, name, source, consent_at, unsubscribed_at, created_at from mailing_list order by id"),
+    mailingCampaigns: await q("select * from mailing_campaigns order by id"),
     auditLog: await q("select * from audit_log order by id"),
   };
 }

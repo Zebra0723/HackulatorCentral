@@ -12,6 +12,7 @@ import { InteractiveHackulator } from "@/components/device/InteractiveHackulator
 import { StaticLauncher } from "@/components/device/StaticLauncher";
 import { FillText, Marquee, ScrollFx } from "@/components/scroll/ScrollFx";
 import { MockupTag } from "@/components/MockupNotice";
+import { MailingSignup } from "@/components/MailingSignup";
 import { Waitlist } from "@/components/Waitlist";
 import { loadCatalogue } from "@/lib/server/catalogue";
 import { dbMode, getDb } from "@/lib/server/db";
@@ -435,6 +436,23 @@ export default async function Home() {
                 </li>
               </ul>
             </div>
+          </div>
+        </section>
+
+        {/* Weekly email */}
+        <section className="drop" id="drop" aria-labelledby="drop-title">
+          <div className="container drop__inner" data-reveal>
+            <div className="drop__copy">
+              <p className="drop__kicker">📬 The Weekly Drop</p>
+              <h2 className="drop__title" id="drop-title">
+                Follow the build, <span className="drop__hl">every week.</span>
+              </h2>
+              <p className="drop__lede">
+                One short email a week: what changed on the bench, sneak peeks and how many waitlist spots are left. Free,
+                no spam, unsubscribe in one click.
+              </p>
+            </div>
+            <MailingSignup available={dbReady} />
           </div>
         </section>
       </main>

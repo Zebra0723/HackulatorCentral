@@ -194,3 +194,39 @@ export async function findActiveWaitlistEntry(db: Db, input: unknown): Promise<W
   const [row] = await db.query<WaitlistRow>("select * from waitlist where code = $1", [code]);
   return row && row.status !== "withdrawn" ? row : null;
 }
+
+export interface WaitlistStatusView {
+  /** First name only, so a found ID shows it's the right spot without revealing more. */
+  firstName: string;
+  code: string;
+  status: WaitlistStatus;
+  queueNumber: number | null;
+  spots: number;
+  joined: string;
+  requests: { reference: string; status: string; created: string }[];
+}
+
+/**
+ * Public lookup by waitlist ID. Shows only what the ID holder needs: first name,
+ * place in the queue, status and their own order requests. Never the email or notes.
+ */
+export async function waitlistStatus(db: Db, input: unknown): Promise<WaitlistStatusView | null> {
+  const code = normalizeWaitlistCode(input);
+  if (!code) return null;
+  const [row] = await db.query<WaitlistRow>("select * from waitlist where code = $1", [code]);
+  if (!row) return null;
+  const requests = await db.query<{ reference: string; status: string; created_at: Date }>(
+    "select reference, status, created_at from enquiries where waitlist_id = $1 and kind = 'order' order by created_at desc limit 20",
+    [row.id],
+  );
+  const settings = await getSettings(db);
+  return {
+    firstName: row.name.split(/\s+/)[0] ?? "",
+    code,
+    status: row.status,
+    queueNumber: row.status === "withdrawn" ? null : await queueNumber(db, row.id),
+    spots: settings.waitlistSpots,
+    joined: new Date(row.created_at).toISOString(),
+    requests: requests.map((r) => ({ reference: r.reference, status: r.status, created: new Date(r.created_at).toISOString() })),
+  };
+}

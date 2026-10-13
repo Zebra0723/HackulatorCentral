@@ -48,6 +48,7 @@ export function Waitlist({
           email: fd.get("email"),
           note: fd.get("note"),
           consent: fd.get("consent") === "on",
+          mailing: fd.get("mailing") === "on",
           website: fd.get("website"),
         }),
       });
@@ -200,6 +201,12 @@ export function Waitlist({
               <input type="checkbox" name="consent" required />
               <span>I&apos;m happy to be contacted about my waitlist spot.</span>
             </label>
+            <label className="wl__consent">
+              <input type="checkbox" name="mailing" />
+              <span>
+                Also send me <strong>The Weekly Drop</strong>, a short weekly build update. <em>(optional)</em>
+              </span>
+            </label>
             {state.kind === "error" && (
               <p className="wl__error" role="alert">
                 {state.message}
@@ -215,6 +222,9 @@ export function Waitlist({
             </p>
           </form>
         )}
+        <a className="wl__check" href="/my-spot">
+          Already joined? <strong>Check my spot →</strong>
+        </a>
       </div>
     </div>
   );
@@ -241,8 +251,8 @@ function WaitlistIdCard({ id }: { id: string }) {
         </button>
       </div>
       <p className="wl__id-hint">
-        <strong>Save this ID.</strong> You&apos;ll need it to send your order request in Build Yours. This browser
-        remembers it too.
+        <strong>Save this ID.</strong> You&apos;ll need it to send your order request in Build Yours, and to{" "}
+        <a href="/my-spot">check your spot</a> any time. This browser remembers it too.
       </p>
     </div>
   );

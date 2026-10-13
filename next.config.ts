@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
       { key: "Referrer-Policy", value: "no-referrer" },
       { key: "X-Frame-Options", value: "DENY" },
     ];
-    return ["/admin", "/admin/:path*", "/track/:path*", "/api/:path*"].map((source) => ({ source, headers: privateHeaders }));
+    return ["/admin", "/admin/:path*", "/track/:path*", "/api/:path*", "/my-spot", "/unsubscribe"].map((source) => ({ source, headers: privateHeaders }));
   },
 };
 

@@ -2,7 +2,7 @@
 
 Website, build configurator, private order tracking and owner control room for **Hackulator**, an independent prototype project that puts a custom board and colour display inside an ordinary Casio scientific calculator.
 
-> **Status: working locally, not deployed.** No payments are taken. The only email the site sends is a copy of each new order request to the owner, and only once `RESEND_API_KEY` is set; customers never get automatic emails. Hackulator itself is still in development, and nothing on the site presents it as a finished product.
+> **Status: working locally, not deployed.** No payments are taken. The site sends two kinds of email, both only once email is set up (`RESEND_API_KEY`): a copy of each new order request to the owner, and the weekly mailing-list email, which goes out only when the owner presses Send. Nobody gets an automatic email for signing up, joining the waitlist or ordering. Hackulator itself is still in development, and nothing on the site presents it as a finished product.
 
 ---
 
@@ -32,8 +32,12 @@ Website, build configurator, private order tracking and owner control room for *
    - Each person gets a **waitlist ID** (like `HK-7KQ2-MX4P`) when they join. It's shown once with a Copy button and remembered in that browser, and it's needed to send an order request.
      - The server rejects orders with a missing, wrong or withdrawn ID. Lower case and missing dashes are accepted.
      - Joining again with the same email never reveals the ID. The person is told to use their original ID or email you.
+   - **Check my spot** (`/my-spot`): type a waitlist ID to see your first name, queue number, status and your own order requests. It never shows the email or notes, the ID is filled in from this browser, and lookups are rate-limited.
+   - An optional, unticked box on the form also signs people up for the weekly email.
+5. **The Weekly Drop mailing list.** A lime sign-up section near the bottom of the homepage takes an email, an optional first name and a required consent tick.
+   - Every email has a one-click unsubscribe link (and the `List-Unsubscribe` header mail apps use). Unsubscribed people are never emailed.
    - Nothing is emailed automatically. When the list is full or closed, the form becomes an email link.
-5. **Owner control room** at `/admin`. Type the owner code on the calculator to open it; every action is checked on the server:
+6. **Owner control room** at `/admin`. Type the owner code on the calculator to open it; every action is checked on the server:
    - dashboard
    - orders and the tracking editor
    - enquiries
@@ -41,6 +45,12 @@ Website, build configurator, private order tracking and owner control room for *
    - **waitlist**: change the number of spots, open or close it, add, edit, reorder, withdraw or remove people, and email everyone holding a spot
      - See each person's waitlist ID and issue a **New ID**, which stops the old one working (send the new one to them yourself).
      - Order requests in **Enquiries** show the waitlist ID and name they were sent with.
+   - **mailing list**: write the weekly email with a live desktop/phone preview of exactly what people get. It has:
+     - a subject, preview text, a big headline, an intro and an optional picture
+     - up to 6 numbered sections (with **bold**, links, bullets and `{name}`)
+     - an optional live "X of N spots left" block and a button
+     - Save draft, **Send a test to me**, then **Send to N subscribers**
+     - past issues you can reuse, a "due!" reminder after 7 days, and the subscriber list
    - **site settings**: where order request emails go (with a **Send a test email** button), the announcement bar, the hero status pill, the stage, base price, availability and fulfilment text on the status card, and switching online order requests on or off
    - devices and service records
    - software releases
@@ -90,7 +100,7 @@ Every new order request is saved in **Enquiries** and also emailed to you. Quest
 2. In Vercel → **Settings → Environment Variables**, add `RESEND_API_KEY` with that key, then redeploy.
 3. In the control room → **Site settings → Order request emails**, enter your email and press **Send a test email**.
 
-Until you add your own domain in Resend, it can only send to the address you signed up to Resend with, so use that one. The email includes the customer's name, email, waitlist ID, note and full build. Reply to it to answer them directly. If sending fails, the order is still saved and the failure appears in **Recent changes**.
+Until you add your own domain in Resend, it can only send to the address you signed up to Resend with, so use that one. The weekly email also needs that domain: in Resend, add and verify your domain (e.g. dailyos.uk), then set `EMAIL_FROM` in Vercel (e.g. `Hackulator <drop@dailyos.uk>`). Until then, test emails to yourself work but **Send to subscribers** stays switched off. Resend's free plan allows 100 emails a day and 3,000 a month. The email includes the customer's name, email, waitlist ID, note and full build. Reply to it to answer them directly. If sending fails, the order is still saved and the failure appears in **Recent changes**.
 
 ## Owner sign-in (calculator code)
 
@@ -152,7 +162,7 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
 
 ## Tests
 
-`npm test` runs **93 tests** in 7 files, all passing:
+`npm test` runs **100 tests** in 8 files, all passing:
 
 - **Pricing (25):** every required example, plus no double charges, tier switching keeping cover choices, the Arcade Pack's third game staying “to be announced”, gold surcharges, share links never carrying personal text, and sanitising untrusted input.
 - **Calculator, games and OS (40):** 17 parser + 14 game + 9 OS tests covering:
@@ -161,7 +171,7 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
   - 2048: merging and tracked slides for the animations
   - Tetris: line clears, the 7-piece bag, hard drop and lock delay
   - the OS: READY/GO, = as hard drop only in Tetris, swipe/tap, best scores, pause / restart / return, and the 07232015 control-room shortcut
-- **Backend on a real in-memory Postgres (16):**
+- **Backend on a real in-memory Postgres (18):**
   - owner-code sign-in, rejecting wrong codes and rate-limiting guesses
   - server-side pricing of enquiries
   - orders need a valid, active waitlist ID (missing, wrong, replaced and withdrawn IDs are refused); questions don't
@@ -174,7 +184,10 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
   - the export contains no secrets
   - waitlist: each join gets an ID (never re-shown for an existing email), fills in order, refuses when full or closed, no duplicate emails, reordering, withdrawing frees a spot, owner edits
   - site settings are validated, trimmed and fall back to defaults
+  - "Check my spot" shows only the holder's own spot and requests, never the email or notes
+  - mailing list: consent required, no duplicates, one-click unsubscribe, re-subscribing, batches with each person's own unsubscribe link and name, unsubscribed people skipped, failed batches counted, and tokens left out of backups
   - order requests are emailed to the owner with the waitlist ID and build; a missing key or a failed send is logged and never loses the request; questions aren't emailed
+- **Weekly email template (5):** escaping, safe links only, bullets and paragraphs, `{name}`, issue number, the waitlist block, and always an unsubscribe link.
 - **Components (12):** 10 configurator tests covering flows, honest “not submitted” messaging, real submission with the saved waitlist ID and questions without one, plus 2 film stage tests.
 
 Also run against the production build in Chromium: an end-to-end walkthrough of all four features on desktop and phone sizes, plus unauthenticated-access checks (401/307/403), privacy headers, keyboard and touch use, reduced motion, and no horizontal scrolling. The results are in the commit/PR notes.

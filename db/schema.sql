@@ -198,3 +198,28 @@ create unique index if not exists waitlist_email_idx on waitlist (lower(email));
 alter table waitlist add column if not exists code text;
 create unique index if not exists waitlist_code_idx on waitlist (code);
 alter table enquiries add column if not exists waitlist_id int references waitlist(id) on delete set null;
+
+create table if not exists mailing_list (
+  id serial primary key,
+  email text not null,
+  name text not null default '',
+  token text unique not null,
+  source text not null default 'website',
+  consent_at timestamptz not null default now(),
+  unsubscribed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create unique index if not exists mailing_list_email_idx on mailing_list (lower(email));
+
+create table if not exists mailing_campaigns (
+  id serial primary key,
+  status text not null default 'draft' check (status in ('draft','sent')),
+  subject text not null default '',
+  content jsonb not null,
+  recipients int not null default 0,
+  failed int not null default 0,
+  sent_at timestamptz,
+  created_by text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);

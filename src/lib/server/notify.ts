@@ -13,6 +13,11 @@ import { getSettings } from "./settings";
  * Without RESEND_API_KEY nothing is sent and the control room says so.
  */
 const RESEND_URL = "https://api.resend.com/emails";
+
+/** Bulk email needs your own verified domain in Resend; the shared test sender only reaches your own inbox. */
+export function bulkEmailReady() {
+  return emailReady() && Boolean(process.env.EMAIL_FROM);
+}
 const DEFAULT_FROM = "Hackulator <onboarding@resend.dev>";
 const TIMEOUT_MS = 8000;
 
@@ -26,29 +31,60 @@ export async function orderEmailRecipient(db: Db) {
 
 type SendResult = { sent: true } | { sent: false; reason: string };
 
-export async function sendOwnerEmail(to: string, subject: string, text: string, replyTo?: string): Promise<SendResult> {
+export interface OutgoingEmail {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+  replyTo?: string;
+  headers?: Record<string, string>;
+}
+
+function resendPayload(m: OutgoingEmail) {
+  return {
+    from: process.env.EMAIL_FROM || DEFAULT_FROM,
+    to: [m.to],
+    subject: m.subject,
+    text: m.text,
+    ...(m.html ? { html: m.html } : {}),
+    ...(m.replyTo ? { reply_to: m.replyTo } : {}),
+    ...(m.headers ? { headers: m.headers } : {}),
+  };
+}
+
+async function resendPost(path: string, body: unknown): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return { sent: false, reason: "Email isn't set up (RESEND_API_KEY is missing)." };
-  if (!to) return { sent: false, reason: "No address to send order emails to." };
   try {
-    const res = await fetch(RESEND_URL, {
+    const res = await fetch(`${RESEND_URL}${path}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: process.env.EMAIL_FROM || DEFAULT_FROM,
-        to: [to],
-        subject,
-        text,
-        ...(replyTo ? { reply_to: replyTo } : {}),
-      }),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (res.ok) return { sent: true };
-    const body = (await res.json().catch(() => ({}))) as { message?: string };
-    return { sent: false, reason: `Email service said ${res.status}${body.message ? `: ${body.message}` : ""}` };
+    const data = (await res.json().catch(() => ({}))) as { message?: string };
+    return { sent: false, reason: `Email service said ${res.status}${data.message ? `: ${data.message}` : ""}` };
   } catch (e) {
     return { sent: false, reason: e instanceof Error ? e.message : "Couldn't reach the email service." };
   }
+}
+
+export async function sendEmail(m: OutgoingEmail): Promise<SendResult> {
+  if (!m.to) return { sent: false, reason: "No address to send to." };
+  return resendPost("", resendPayload(m));
+}
+
+/** Up to 100 different emails in one request (Resend's batch limit). */
+export const BATCH_SIZE = 100;
+export async function sendEmailBatch(messages: OutgoingEmail[]): Promise<SendResult> {
+  if (messages.length > BATCH_SIZE) throw new Error("Batch too large.");
+  return resendPost("/batch", messages.map(resendPayload));
+}
+
+export async function sendOwnerEmail(to: string, subject: string, text: string, replyTo?: string, html?: string): Promise<SendResult> {
+  if (!to) return { sent: false, reason: "No address to send order emails to." };
+  return sendEmail({ to, subject, text, replyTo, html });
 }
 
 /**

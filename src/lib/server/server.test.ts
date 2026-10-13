@@ -11,6 +11,7 @@ const devices = await import("./devices");
 const settingsMod = await import("./settings");
 const waitlist = await import("./waitlist");
 const notify = await import("./notify");
+const mailing = await import("./mailing");
 const { EMPTY_BUILD } = await import("@/lib/pricing");
 const { OWNER_CODE } = await import("@/lib/hackos/os");
 
@@ -342,5 +343,95 @@ describe("order request emails", () => {
       fetchMock.mockRestore();
       delete process.env.RESEND_API_KEY;
     }
+  });
+});
+
+describe("my waitlist spot", () => {
+  it("shows the ID holder their place, status and order requests, and nothing else", async () => {
+    expect(await waitlist.waitlistStatus(db, "nonsense")).toBeNull();
+    expect(await waitlist.waitlistStatus(db, "HK-AAAA-AAAA")).toBeNull();
+    const id = await waitlist.addWaitlistEntry(db, ME, { name: "Lin Example", email: "lin@example.com", privateNote: "secret" });
+    const code = (await waitlist.listWaitlist(db)).find((r) => r.id === id)!.code;
+    await orders.createEnquiry(db, { kind: "order", name: "Lin", email: "lin@example.com", message: "", build: classicsBuild, waitlistId: code });
+    const v = (await waitlist.waitlistStatus(db, code.toLowerCase()))!;
+    expect(v).toMatchObject({ firstName: "Lin", code, status: "waiting" });
+    expect(v.queueNumber).toBeGreaterThan(0);
+    expect(v.requests).toHaveLength(1);
+    expect(v.requests[0]).toMatchObject({ status: "new" });
+    expect(JSON.stringify(v)).not.toMatch(/lin@example\.com|secret|Example/);
+    await waitlist.updateWaitlistEntry(db, ME, id, { status: "withdrawn" });
+    expect(await waitlist.waitlistStatus(db, code)).toMatchObject({ status: "withdrawn", queueNumber: null });
+  });
+});
+
+describe("mailing list", () => {
+  it("needs consent, re-subscribes after unsubscribing and never emails unsubscribed people", async () => {
+    await expect(mailing.subscribe(db, { email: "a@example.com" })).rejects.toThrow(/tick the box/);
+    await expect(mailing.subscribe(db, { email: "nope", consent: true })).rejects.toThrow(/valid email/);
+    await mailing.subscribe(db, { email: "Ann@Example.com", name: "Ann", consent: true });
+    await mailing.subscribe(db, { email: "ann@example.com", consent: true }); // no duplicate, keeps the name
+    await mailing.subscribe(db, { email: "bob@example.com", name: "Bob", consent: true });
+    await mailing.subscribe(db, { email: "cy@example.com", consent: true });
+    let subs = await mailing.listSubscribers(db);
+    expect(subs.map((s) => s.email).sort()).toEqual(["ann@example.com", "bob@example.com", "cy@example.com"]);
+    expect(subs.find((s) => s.email === "ann@example.com")!.name).toBe("Ann");
+
+    const cy = subs.find((s) => s.email === "cy@example.com")!;
+    expect(await mailing.unsubscribe(db, "wrong-token")).toEqual({ ok: false });
+    expect(await mailing.unsubscribe(db, cy.token)).toEqual({ ok: true });
+    expect(await mailing.mailingSummary(db)).toMatchObject({ active: 2, unsubscribed: 1, lastSentAt: null });
+
+    const content = { subject: "Hi {name}", headline: "Bench news", intro: "Hello **{name}**", sections: [{ title: "One", body: "- a\n- b" }], ctaLabel: "Build", ctaUrl: "/#build" };
+    // Sending to everyone needs the API key and your own sender address.
+    delete process.env.RESEND_API_KEY;
+    await expect(mailing.sendCampaign(db, ME, content, "https://example.com")).rejects.toThrow(/EMAIL_FROM/);
+
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.EMAIL_FROM = "Hackulator <drop@example.com>";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    try {
+      await expect(mailing.sendCampaign(db, ME, { subject: "" }, "https://example.com")).rejects.toThrow(/subject/);
+      await mailing.saveDraft(db, ME, content);
+      expect((await mailing.getDraft(db))!.content.subject).toBe("Hi {name}");
+
+      const r = await mailing.sendCampaign(db, ME, content, "https://example.com");
+      expect(r).toMatchObject({ sent: 2, failed: 0, issue: 1 });
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe("https://api.resend.com/emails/batch");
+      const batch = JSON.parse((init as RequestInit).body as string) as { to: string[]; subject: string; html: string; text: string; from: string; headers: Record<string, string> }[];
+      expect(batch.map((m) => m.to[0]).sort()).toEqual(["ann@example.com", "bob@example.com"]);
+      const ann = batch.find((m) => m.to[0] === "ann@example.com")!;
+      const annToken = subs.find((s) => s.email === "ann@example.com")!.token;
+      expect(ann.subject).toBe("Hi Ann");
+      expect(ann.from).toBe("Hackulator <drop@example.com>");
+      expect(ann.html).toContain(`https://example.com/unsubscribe?t=${annToken}`);
+      expect(ann.headers["List-Unsubscribe"]).toBe(`<https://example.com/unsubscribe?t=${annToken}>`);
+      expect(ann.html).toContain("Issue #1");
+      expect(ann.html).toContain("https://example.com/#build");
+      expect(ann.text).toContain("Hello Ann");
+      // Each person gets only their own unsubscribe link.
+      const bobToken = subs.find((s) => s.email === "bob@example.com")!.token;
+      expect(ann.html).not.toContain(bobToken);
+
+      // The draft became issue #1; the next one is #2.
+      expect(await mailing.getDraft(db)).toBeNull();
+      expect((await mailing.sentCampaigns(db))[0]).toMatchObject({ subject: "Hi {name}", recipients: 2 });
+      expect((await mailing.renderContext(db, "https://example.com")).issueNumber).toBe(2);
+
+      // A failed batch is counted, not thrown.
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ message: "daily limit" }), { status: 429 }));
+      expect(await mailing.sendCampaign(db, ME, content, "https://example.com")).toMatchObject({ sent: 0, failed: 2, error: "Email service said 429: daily limit" });
+
+      // Subscribing again after unsubscribing counts as fresh consent.
+      await mailing.subscribe(db, { email: "cy@example.com", consent: true });
+      expect((await mailing.mailingSummary(db)).active).toBe(3);
+    } finally {
+      fetchMock.mockRestore();
+      delete process.env.RESEND_API_KEY;
+      delete process.env.EMAIL_FROM;
+    }
+    const exp = await devices.exportAll(db);
+    expect(exp.mailingList.length).toBe(3);
+    expect(JSON.stringify(exp.mailingList)).not.toContain(subs[0].token);
   });
 });
