@@ -211,6 +211,16 @@ create table if not exists mailing_list (
 );
 create unique index if not exists mailing_list_email_idx on mailing_list (lower(email));
 
+create table if not exists email_images (
+  id text primary key,
+  mime text not null,
+  bytes bytea not null,
+  size int not null,
+  name text not null default '',
+  created_by text not null,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists mailing_campaigns (
   id serial primary key,
   status text not null default 'draft' check (status in ('draft','sent')),

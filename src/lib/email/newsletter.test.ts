@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { STARTER_NEWSLETTER, renderNewsletter, renderRichText, sanitizeNewsletter } from "./newsletter";
+import { BLOCK_LIBRARY, NEWSLETTER_PRESETS, THEMES, createBlock, renderNewsletter, renderRichText, sanitizeNewsletter, type NewsletterContent } from "./newsletter";
 
 const ctx = { siteUrl: "https://example.com", unsubscribeUrl: "https://example.com/unsubscribe?t=abc", issueNumber: 7, date: new Date("2026-10-13T12:00:00Z") };
+const rt = (s: string) => renderRichText(s, "https://example.com", { color: "#fff", strong: "#fff", link: "#0f0" });
 
-describe("weekly email template", () => {
+describe("weekly email builder", () => {
   it("escapes everything and only allows http(s) or site links", () => {
-    const html = renderRichText('<script>alert(1)</script> **hi** [ok](https://a.com) [bad](javascript:alert(1)) [site](/#build)', "https://example.com");
+    const html = rt('<script>alert(1)</script> **hi** [ok](https://a.com) [bad](javascript:alert(1)) [site](/#build)');
     expect(html).not.toContain("<script>");
     expect(html).toContain("&lt;script&gt;");
     expect(html).toContain("<strong");
@@ -15,42 +16,59 @@ describe("weekly email template", () => {
   });
 
   it("turns dash lines into bullets and blank lines into paragraphs", () => {
-    const html = renderRichText("Para one\n\n- a\n- b\n\nPara two", "https://example.com");
+    const html = rt("Para one\n\n- a\n- b\n\nPara two");
     expect(html.match(/<p /g)).toHaveLength(2);
     expect(html.match(/<li /g)).toHaveLength(2);
   });
 
-  it("personalises, numbers the issue and always has an unsubscribe link", () => {
-    const m = renderNewsletter({ ...STARTER_NEWSLETTER, subject: "Hey {name}" }, { ...ctx, name: "Ada", waitlist: { spots: 10, left: 3, open: true } });
-    expect(m.subject).toBe("Hey Ada");
-    expect(m.html).toMatch(/Issue <span[^>]*>#7</);
-    expect(m.html).toContain("of 10 spots left in the first batch");
-    expect(m.html).toContain("https://example.com/email/hero.jpg");
-    expect(m.html).toContain("https://example.com/email/snake.png");
-    expect(m.text).toContain("3 of 10 spots left");
-    expect(m.html).toContain("https://example.com/unsubscribe?t=abc");
-    expect(m.text).toContain("Unsubscribe: https://example.com/unsubscribe?t=abc");
-    expect(renderNewsletter({ ...STARTER_NEWSLETTER, subject: "Hey {name}" }, ctx).subject).toBe("Hey there");
+  it("renders every template in every theme, personalised, with an unsubscribe link", () => {
+    for (const preset of NEWSLETTER_PRESETS) {
+      for (const theme of Object.keys(THEMES) as (keyof typeof THEMES)[]) {
+        const doc = { ...preset.build(), theme };
+        const m = renderNewsletter(doc, { ...ctx, name: "Ada", waitlist: { spots: 10, left: 3, open: true } });
+        expect(m.html).toContain("https://example.com/unsubscribe?t=abc");
+        expect(m.text).toContain("Unsubscribe: https://example.com/unsubscribe?t=abc");
+        expect(m.html).toContain(THEMES[theme].bg);
+        expect(m.html).toMatch(/#7</);
+        expect(m.html).not.toContain("{name}");
+      }
+    }
+    const launch = renderNewsletter(NEWSLETTER_PRESETS[0].build(), { ...ctx, name: "Ada", waitlist: { spots: 10, left: 3, open: true } });
+    expect(launch.html).toContain("Hi Ada!");
+    expect(launch.html).toContain("of 10 spots left in the first batch");
+    expect(launch.text).toContain("3 of 10 spots left");
+    expect(launch.html).toContain("https://example.com/email/hero.jpg");
   });
 
-  it("hides the waitlist block when switched off and drops unsafe images and buttons", () => {
-    const m = renderNewsletter(
-      { ...STARTER_NEWSLETTER, showWaitlist: false, imageUrl: "javascript:x", ctaUrl: "javascript:y", sections: [{ title: "A", body: "b", imageUrl: "javascript:z" }] },
-      { ...ctx, waitlist: { spots: 10, left: 3, open: true } },
+  it("renders every kind of block, and drops unsafe pictures and links", () => {
+    const blocks = BLOCK_LIBRARY.map((b) => createBlock(b.type));
+    const doc: NewsletterContent = { version: 2, subject: "s", preheader: "", theme: "arcade", blocks };
+    const m = renderNewsletter(doc, { ...ctx, waitlist: { spots: 10, left: 3, open: true } });
+    expect(m.html).toContain("Big news.");
+    expect(m.html).toContain("Something big.");
+    expect(m.html).toContain("coolest calculator");
+    const bad = renderNewsletter(
+      { ...doc, blocks: [{ ...createBlock("image"), imageUrl: "javascript:x" } as never, { ...createBlock("button"), url: "javascript:y" } as never] },
+      ctx,
     );
-    expect(m.html).not.toContain("spots left");
-    expect(m.html).not.toContain("javascript:");
+    expect(bad.html).not.toContain("javascript:");
   });
 
-  it("cleans untrusted content", () => {
-    const c = sanitizeNewsletter({ subject: "x".repeat(500), sections: Array.from({ length: 20 }, () => ({ title: "t", body: "b" })), showWaitlist: "no" });
+  it("tags blocks only in the editor preview", () => {
+    const doc = NEWSLETTER_PRESETS[0].build();
+    expect(renderNewsletter(doc, ctx).html).not.toContain("data-bid");
+    expect(renderNewsletter(doc, { ...ctx, preview: {} }).html).toContain(`data-bid="${doc.blocks[0].id}"`);
+  });
+
+  it("cleans untrusted content and upgrades drafts from the first version", () => {
+    const c = sanitizeNewsletter({ subject: "x".repeat(500), theme: "nope", blocks: [...Array(40)].map(() => ({ type: "text", body: "b" })).concat([{ type: "evil" } as never]) });
     expect(c.subject.length).toBe(120);
-    expect(c.sections).toHaveLength(6);
-    expect(c.showWaitlist).toBe(true);
-    expect(sanitizeNewsletter(null).sections).toEqual([]);
-    // Drafts saved before the redesign still load.
-    const old = sanitizeNewsletter({ subject: "s", sections: [{ title: "t", body: "b" }] });
-    expect(old.sections[0]).toEqual({ title: "t", body: "b", imageUrl: "" });
-    expect(old.highlights).toEqual([]);
+    expect(c.theme).toBe("midnight");
+    expect(c.blocks).toHaveLength(30);
+    expect(new Set(c.blocks.map((b) => b.id)).size).toBe(30);
+    expect(sanitizeNewsletter(null).blocks).toEqual([]);
+
+    const old = sanitizeNewsletter({ subject: "s", headline: "Hi", intro: "Hello", sections: [{ title: "t", body: "b", imageUrl: "/email/snake.png" }, { title: "u", body: "c" }], ctaLabel: "Go", ctaUrl: "/#build", closingHeadline: "Bye" });
+    expect(old.blocks.map((b) => b.type)).toEqual(["hero", "waitlist", "feature", "text", "cta"]);
   });
 });

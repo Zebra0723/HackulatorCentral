@@ -213,6 +213,7 @@ export async function exportAll(db: Db) {
     siteSettings: await q("select * from site_settings order by key"),
     mailingList: await q("select id, email, name, source, consent_at, unsubscribed_at, created_at from mailing_list order by id"),
     mailingCampaigns: await q("select * from mailing_campaigns order by id"),
+    emailImages: await q("select id, mime, size, name, created_at from email_images order by created_at"),
     auditLog: await q("select * from audit_log order by id"),
   };
 }

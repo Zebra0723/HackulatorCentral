@@ -111,8 +111,7 @@ async function nextIssueNumber(db: Db) {
 
 function validateForSend(c: NewsletterContent) {
   if (!c.subject) throw new ValidationError("Add a subject line.");
-  if (!c.headline && !c.intro && !c.sections.some((s) => s.body)) throw new ValidationError("The email is empty. Add a headline, intro or section.");
-  if (c.ctaLabel && !c.ctaUrl) throw new ValidationError("Add a link for the button, or clear the button text.");
+  if (!c.blocks.length) throw new ValidationError("The email is empty. Add some blocks.");
 }
 
 /** The context a rendered email needs (live waitlist numbers, issue number). */
@@ -199,4 +198,55 @@ export async function mailingSummary(db: Db) {
   const [last] = await db.query<{ sent_at: Date }>("select sent_at from mailing_campaigns where status = 'sent' order by sent_at desc limit 1");
   const daysSinceLast = last ? Math.floor((Date.now() - new Date(last.sent_at).getTime()) / 86_400_000) : null;
   return { active: r.active, unsubscribed: r.unsubscribed, lastSentAt: last?.sent_at ?? null, daysSinceLast };
+}
+
+/* ------------------------------------------------------------ email images */
+
+const MAX_EMAIL_IMAGE = 3 * 1024 * 1024;
+
+/** Email-safe formats only: WebP doesn't show in some mail apps (e.g. Outlook). */
+export function sniffEmailImage(bytes: Uint8Array): "image/jpeg" | "image/png" | "image/gif" | null {
+  if (bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (bytes.length > 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "image/png";
+  if (bytes.length > 6 && String.fromCharCode(...bytes.slice(0, 6)).match(/^GIF8[79]a$/)) return "image/gif";
+  return null;
+}
+
+export const emailImageUrl = (id: string) => `/email-img/${id}`;
+
+/** Upload a picture for use in emails. It's public (people's mail apps load it), so only upload what you'd post anyway. */
+export async function addEmailImage(db: Db, actor: string, bytes: Uint8Array, name: string) {
+  if (!bytes.length) throw new ValidationError("Choose a picture.");
+  if (bytes.length > MAX_EMAIL_IMAGE) throw new ValidationError("Pictures must be 3 MB or smaller.");
+  const mime = sniffEmailImage(bytes);
+  if (!mime) throw new ValidationError("Use a JPEG, PNG or GIF. (WebP doesn't show in some mail apps.)");
+  const id = randomBytes(12).toString("base64url");
+  await db.query("insert into email_images (id, mime, bytes, size, name, created_by) values ($1,$2,$3,$4,$5,$6)", [
+    id,
+    mime,
+    Buffer.from(bytes),
+    bytes.length,
+    clean(name, 120),
+    actor,
+  ]);
+  await audit(db, actor, "mailing.image.add", "email_image", id, { size: bytes.length, mime });
+  return { id, url: emailImageUrl(id) };
+}
+
+export async function listEmailImages(db: Db) {
+  const rows = await db.query<{ id: string; name: string; size: number; created_at: Date }>(
+    "select id, name, size, created_at from email_images order by created_at desc limit 200",
+  );
+  return rows.map((r) => ({ id: r.id, name: r.name, size: r.size, url: emailImageUrl(r.id) }));
+}
+
+export async function deleteEmailImage(db: Db, actor: string, id: string) {
+  await db.query("delete from email_images where id = $1", [id]);
+  await audit(db, actor, "mailing.image.delete", "email_image", id);
+}
+
+export async function readEmailImage(db: Db, id: string) {
+  if (!/^[A-Za-z0-9_-]{8,32}$/.test(id)) return null;
+  const [row] = await db.query<{ mime: string; bytes: Uint8Array }>("select mime, bytes from email_images where id = $1", [id]);
+  return row ?? null;
 }

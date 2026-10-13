@@ -406,7 +406,7 @@ describe("mailing list", () => {
       expect(ann.from).toBe("Hackulator <drop@example.com>");
       expect(ann.html).toContain(`https://example.com/unsubscribe?t=${annToken}`);
       expect(ann.headers["List-Unsubscribe"]).toBe(`<https://example.com/unsubscribe?t=${annToken}>`);
-      expect(ann.html).toMatch(/Issue <span[^>]*>#1</);
+      expect(ann.html).toMatch(/The Weekly Drop <span[^>]*>#1</);
       expect(ann.html).toContain("https://example.com/#build");
       expect(ann.text).toContain("Hello Ann");
       // Each person gets only their own unsubscribe link.
@@ -430,6 +430,19 @@ describe("mailing list", () => {
       delete process.env.RESEND_API_KEY;
       delete process.env.EMAIL_FROM;
     }
+    // Pictures for emails: email-safe formats only, served by a random id.
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+    const webp = new Uint8Array([...Buffer.from("RIFF"), 0, 0, 0, 0, ...Buffer.from("WEBP")]);
+    await expect(mailing.addEmailImage(db, ME, webp, "x.webp")).rejects.toThrow(/JPEG, PNG or GIF/);
+    await expect(mailing.addEmailImage(db, ME, new Uint8Array(4 * 1024 * 1024), "big.png")).rejects.toThrow(/3 MB/);
+    const up = await mailing.addEmailImage(db, ME, png, "proto.png");
+    expect(up.url).toMatch(/^\/email-img\/[A-Za-z0-9_-]{16}$/);
+    expect((await mailing.readEmailImage(db, up.id))!.mime).toBe("image/png");
+    expect(await mailing.readEmailImage(db, "../../etc")).toBeNull();
+    expect((await mailing.listEmailImages(db)).map((i) => i.name)).toEqual(["proto.png"]);
+    await mailing.deleteEmailImage(db, ME, up.id);
+    expect(await mailing.readEmailImage(db, up.id)).toBeNull();
+
     const exp = await devices.exportAll(db);
     expect(exp.mailingList.length).toBe(3);
     expect(JSON.stringify(exp.mailingList)).not.toContain(subs[0].token);

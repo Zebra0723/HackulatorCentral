@@ -45,16 +45,14 @@ Website, build configurator, private order tracking and owner control room for *
    - **waitlist**: change the number of spots, open or close it, add, edit, reorder, withdraw or remove people, and email everyone holding a spot
      - See each person's waitlist ID and issue a **New ID**, which stops the old one working (send the new one to them yourself).
      - Order requests in **Enquiries** show the waitlist ID and name they were sent with.
-   - **mailing list**: write the weekly email with a live desktop/phone preview of exactly what people get. It's a promo-style design:
-     - a dark hero with a pill, a giant two-line headline (second line in lime), a button and a product shot
-     - a strip of up to 4 big numbers
-     - a lime "7 of 10 spots left" banner with live counts
-     - up to 6 numbered features that zig-zag with pictures (or sit as cards without one), using **bold**, links, bullets and `{name}`
-     - a closing call-to-action box
-     - start from the **Launch promo** or **Weekly update** template, and pick pictures from the ready-made set (product hero, Snake, 2048, Tetris in `public/email/`) or paste your own link
-     - Save draft, **Send a test to me**, then **Send to N subscribers**
-     - past issues you can reuse, a "due!" reminder after 7 days, and the subscriber list
-     - on phones, columns stack and the numbers become a 2×2 grid
+   - **mailing list**: a drag-and-drop **email builder** for The Weekly Drop, with a live desktop/phone preview of exactly what people get:
+     - **12 blocks**: Hero, Picture, Feature (picture beside text), Cards (2 or 3 in a row), Big numbers, Spots left (live waitlist counter), Banner (huge text), Text, Quote, Button, Call to action and Divider
+     - **6 themes**: Midnight Lime, Arcade, Sunset, Ocean, Paper and Lime Pop
+     - **5 templates**: Launch promo, Game spotlight, Big announcement, Spots almost gone and Weekly update
+     - click anything in the preview to edit it; drag, duplicate or delete blocks; undo/redo; autosaves as a draft
+     - ready-made pictures (product shots, the concept film with a play button, Snake/2048/Tetris art, cover colours) or **upload your own** (JPEG/PNG/GIF up to 3 MB, publicly viewable so mail apps can load them)
+     - **bold**, links, bullets and `{name}` in text; quick links to the waitlist, Build Yours, the demo and more
+     - **Send a test to me**, then **Send to N subscribers**; past issues you can reuse, a "due!" reminder after 7 days, and the subscriber list
    - **site settings**: where order request emails go (with a **Send a test email** button), the announcement bar, the hero status pill, the stage, base price, availability and fulfilment text on the status card, and switching online order requests on or off
    - devices and service records
    - software releases
@@ -166,7 +164,7 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
 
 ## Tests
 
-`npm test` runs **100 tests** in 8 files, all passing:
+`npm test` runs **101 tests** in 8 files, all passing:
 
 - **Pricing (25):** every required example, plus no double charges, tier switching keeping cover choices, the Arcade Pack's third game staying “to be announced”, gold surcharges, share links never carrying personal text, and sanitising untrusted input.
 - **Calculator, games and OS (40):** 17 parser + 14 game + 9 OS tests covering:
@@ -189,9 +187,9 @@ Delivered orders drop out of the active queue. **Archive** them when you're done
   - waitlist: each join gets an ID (never re-shown for an existing email), fills in order, refuses when full or closed, no duplicate emails, reordering, withdrawing frees a spot, owner edits
   - site settings are validated, trimmed and fall back to defaults
   - "Check my spot" shows only the holder's own spot and requests, never the email or notes
-  - mailing list: consent required, no duplicates, one-click unsubscribe, re-subscribing, batches with each person's own unsubscribe link and name, unsubscribed people skipped, failed batches counted, and tokens left out of backups
+  - mailing list: consent required, no duplicates, one-click unsubscribe, re-subscribing, batches with each person's own unsubscribe link and name, unsubscribed people skipped, failed batches counted, tokens left out of backups, and email picture uploads (email-safe formats only, random ids, size limit)
   - order requests are emailed to the owner with the waitlist ID and build; a missing key or a failed send is logged and never loses the request; questions aren't emailed
-- **Weekly email template (5):** escaping, safe links only, bullets and paragraphs, `{name}`, issue number, the waitlist block, and always an unsubscribe link.
+- **Email builder (6):** escaping and safe links only, bullets and paragraphs, every template in every theme (personalised, numbered, always with an unsubscribe link), every block type, editor-only preview tags, and cleaning untrusted content (including upgrading old drafts).
 - **Components (12):** 10 configurator tests covering flows, honest “not submitted” messaging, real submission with the saved waitlist ID and questions without one, plus 2 film stage tests.
 
 Also run against the production build in Chromium: an end-to-end walkthrough of all four features on desktop and phone sizes, plus unauthenticated-access checks (401/307/403), privacy headers, keyboard and touch use, reduced motion, and no horizontal scrolling. The results are in the commit/PR notes.

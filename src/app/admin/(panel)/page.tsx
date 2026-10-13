@@ -38,6 +38,8 @@ const ACTION_TEXT: Record<string, string> = {
   "enquiry.email_failed": "Order email not sent",
   "mailing.send": "Weekly Drop sent",
   "mailing.remove": "Subscriber deleted",
+  "mailing.image.add": "Email picture uploaded",
+  "mailing.image.delete": "Email picture deleted",
 };
 
 export default async function AdminHome() {
