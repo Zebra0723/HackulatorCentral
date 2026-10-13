@@ -23,15 +23,21 @@ describe("weekly email template", () => {
   it("personalises, numbers the issue and always has an unsubscribe link", () => {
     const m = renderNewsletter({ ...STARTER_NEWSLETTER, subject: "Hey {name}" }, { ...ctx, name: "Ada", waitlist: { spots: 10, left: 3, open: true } });
     expect(m.subject).toBe("Hey Ada");
-    expect(m.html).toContain("Issue #7");
-    expect(m.html).toContain("3 of 10 spots left");
+    expect(m.html).toMatch(/Issue <span[^>]*>#7</);
+    expect(m.html).toContain("of 10 spots left in the first batch");
+    expect(m.html).toContain("https://example.com/email/hero.jpg");
+    expect(m.html).toContain("https://example.com/email/snake.png");
+    expect(m.text).toContain("3 of 10 spots left");
     expect(m.html).toContain("https://example.com/unsubscribe?t=abc");
     expect(m.text).toContain("Unsubscribe: https://example.com/unsubscribe?t=abc");
     expect(renderNewsletter({ ...STARTER_NEWSLETTER, subject: "Hey {name}" }, ctx).subject).toBe("Hey there");
   });
 
   it("hides the waitlist block when switched off and drops unsafe images and buttons", () => {
-    const m = renderNewsletter({ ...STARTER_NEWSLETTER, showWaitlist: false, imageUrl: "javascript:x", ctaUrl: "javascript:y" }, { ...ctx, waitlist: { spots: 10, left: 3, open: true } });
+    const m = renderNewsletter(
+      { ...STARTER_NEWSLETTER, showWaitlist: false, imageUrl: "javascript:x", ctaUrl: "javascript:y", sections: [{ title: "A", body: "b", imageUrl: "javascript:z" }] },
+      { ...ctx, waitlist: { spots: 10, left: 3, open: true } },
+    );
     expect(m.html).not.toContain("spots left");
     expect(m.html).not.toContain("javascript:");
   });
@@ -42,5 +48,9 @@ describe("weekly email template", () => {
     expect(c.sections).toHaveLength(6);
     expect(c.showWaitlist).toBe(true);
     expect(sanitizeNewsletter(null).sections).toEqual([]);
+    // Drafts saved before the redesign still load.
+    const old = sanitizeNewsletter({ subject: "s", sections: [{ title: "t", body: "b" }] });
+    expect(old.sections[0]).toEqual({ title: "t", body: "b", imageUrl: "" });
+    expect(old.highlights).toEqual([]);
   });
 });

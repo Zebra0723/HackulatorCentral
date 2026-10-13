@@ -45,12 +45,16 @@ Website, build configurator, private order tracking and owner control room for *
    - **waitlist**: change the number of spots, open or close it, add, edit, reorder, withdraw or remove people, and email everyone holding a spot
      - See each person's waitlist ID and issue a **New ID**, which stops the old one working (send the new one to them yourself).
      - Order requests in **Enquiries** show the waitlist ID and name they were sent with.
-   - **mailing list**: write the weekly email with a live desktop/phone preview of exactly what people get. It has:
-     - a subject, preview text, a big headline, an intro and an optional picture
-     - up to 6 numbered sections (with **bold**, links, bullets and `{name}`)
-     - an optional live "X of N spots left" block and a button
+   - **mailing list**: write the weekly email with a live desktop/phone preview of exactly what people get. It's a promo-style design:
+     - a dark hero with a pill, a giant two-line headline (second line in lime), a button and a product shot
+     - a strip of up to 4 big numbers
+     - a lime "7 of 10 spots left" banner with live counts
+     - up to 6 numbered features that zig-zag with pictures (or sit as cards without one), using **bold**, links, bullets and `{name}`
+     - a closing call-to-action box
+     - start from the **Launch promo** or **Weekly update** template, and pick pictures from the ready-made set (product hero, Snake, 2048, Tetris in `public/email/`) or paste your own link
      - Save draft, **Send a test to me**, then **Send to N subscribers**
      - past issues you can reuse, a "due!" reminder after 7 days, and the subscriber list
+     - on phones, columns stack and the numbers become a 2×2 grid
    - **site settings**: where order request emails go (with a **Send a test email** button), the announcement bar, the hero status pill, the stage, base price, availability and fulfilment text on the status card, and switching online order requests on or off
    - devices and service records
    - software releases

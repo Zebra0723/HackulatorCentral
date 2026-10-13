@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import {
+  EMAIL_IMAGES,
   NEWSLETTER_LIMITS as L,
-  STARTER_NEWSLETTER,
+  NEWSLETTER_PRESETS,
   renderNewsletter,
   type NewsletterContent,
 } from "@/lib/email/newsletter";
@@ -83,43 +84,95 @@ export function MailingComposer({
       <div className="a-mail__edit a-card">
         <div className="a-head">
           <h2>Write this week&apos;s Drop</h2>
-          <button type="button" className="a-btn a-btn--sm a-btn--ghost" onClick={() => window.confirm("Replace what you've written with the starter template?") && setC(STARTER_NEWSLETTER)}>
-            Starter template
-          </button>
+          <label className="a-mail__preset">
+            <span className="visually-hidden">Start from a template</span>
+            <select
+              value=""
+              onChange={(e) => {
+                const preset = NEWSLETTER_PRESETS.find((p) => p.id === e.target.value);
+                if (preset && window.confirm(`Replace what you've written with the “${preset.label}” template?`)) setC(preset.content);
+              }}
+            >
+              <option value="">Start from a template…</option>
+              {NEWSLETTER_PRESETS.map((p) => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </select>
+          </label>
         </div>
-        <label className="a-field">
-          <span>Subject line</span>
-          <input value={c.subject} maxLength={L.subject} onChange={(e) => set("subject", e.target.value)} placeholder="This week on the bench 🔧" />
-        </label>
-        <label className="a-field">
-          <span>Preview text <em>(the grey line after the subject in inboxes)</em></span>
-          <input value={c.preheader} maxLength={L.preheader} onChange={(e) => set("preheader", e.target.value)} />
-        </label>
-        <label className="a-field">
-          <span>Big headline</span>
-          <input value={c.headline} maxLength={L.headline} onChange={(e) => set("headline", e.target.value)} />
-        </label>
-        <label className="a-field">
-          <span>Intro</span>
-          <textarea rows={3} value={c.intro} maxLength={L.intro} onChange={(e) => set("intro", e.target.value)} />
-        </label>
-        <label className="a-field">
-          <span>Picture <em>(optional, an image link starting https://)</em></span>
-          <input value={c.imageUrl} maxLength={L.imageUrl} onChange={(e) => set("imageUrl", e.target.value)} placeholder="https://…/photo.jpg" />
-        </label>
+
+        <fieldset className="a-fieldset">
+          <legend>Inbox</legend>
+          <label className="a-field">
+            <span>Subject line</span>
+            <input value={c.subject} maxLength={L.subject} onChange={(e) => set("subject", e.target.value)} placeholder="Your calculator is about to get a lot more fun 🎮" />
+          </label>
+          <label className="a-field">
+            <span>Preview text <em>(the grey line after the subject)</em></span>
+            <input value={c.preheader} maxLength={L.preheader} onChange={(e) => set("preheader", e.target.value)} />
+          </label>
+        </fieldset>
+
+        <fieldset className="a-fieldset">
+          <legend>Hero</legend>
+          <label className="a-field">
+            <span>Little pill above the headline</span>
+            <input value={c.eyebrow} maxLength={L.eyebrow} onChange={(e) => set("eyebrow", e.target.value)} placeholder="The Weekly Drop" />
+          </label>
+          <div className="a-grid2">
+            <label className="a-field">
+              <span>Headline</span>
+              <input value={c.headline} maxLength={L.headline} onChange={(e) => set("headline", e.target.value)} placeholder="A calculator." />
+            </label>
+            <label className="a-field">
+              <span>Second line <em>(in lime)</em></span>
+              <input value={c.headlineAccent} maxLength={L.headlineAccent} onChange={(e) => set("headlineAccent", e.target.value)} placeholder="Reimagined." />
+            </label>
+          </div>
+          <label className="a-field">
+            <span>Intro</span>
+            <textarea rows={3} value={c.intro} maxLength={L.intro} onChange={(e) => set("intro", e.target.value)} />
+          </label>
+          <ImagePicker label="Big picture" value={c.imageUrl} onChange={(v) => set("imageUrl", v)} />
+          <div className="a-grid2">
+            <label className="a-field">
+              <span>Button text</span>
+              <input value={c.ctaLabel} maxLength={L.ctaLabel} onChange={(e) => set("ctaLabel", e.target.value)} placeholder="Reserve my spot" />
+            </label>
+            <label className="a-field">
+              <span>Button link</span>
+              <input value={c.ctaUrl} maxLength={L.ctaUrl} onChange={(e) => set("ctaUrl", e.target.value)} placeholder="/#waitlist or https://…" />
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset className="a-fieldset">
+          <legend>Big numbers strip <em className="a-muted">(up to 4, optional)</em></legend>
+          {c.highlights.map((h, i) => (
+            <div key={i} className="a-inline a-mail__hl">
+              <input aria-label={`Number ${i + 1}`} value={h.value} maxLength={L.highlightValue} placeholder="3" onChange={(e) => setC((p) => ({ ...p, highlights: p.highlights.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) }))} />
+              <input aria-label={`Label ${i + 1}`} value={h.label} maxLength={L.highlightLabel} placeholder="games included" onChange={(e) => setC((p) => ({ ...p, highlights: p.highlights.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) }))} />
+              <button type="button" className="a-btn a-btn--sm a-btn--ghost" aria-label={`Remove number ${i + 1}`} onClick={() => setC((p) => ({ ...p, highlights: p.highlights.filter((_, j) => j !== i) }))}>✕</button>
+            </div>
+          ))}
+          {c.highlights.length < L.highlights && (
+            <button type="button" className="a-btn a-btn--sm" onClick={() => setC((p) => ({ ...p, highlights: [...p.highlights, { value: "", label: "" }] }))}>+ Add number</button>
+          )}
+        </fieldset>
+
         <label className="a-check">
-          <input type="checkbox" checked={c.showWaitlist} onChange={(e) => set("showWaitlist", e.target.checked)} /> Show the live waitlist spots block
-          ({waitlist.open ? `${waitlist.left} of ${waitlist.spots} left` : "closed"})
+          <input type="checkbox" checked={c.showWaitlist} onChange={(e) => set("showWaitlist", e.target.checked)} /> Show the big lime &ldquo;spots left&rdquo; banner
+          ({waitlist.open ? `${waitlist.left} of ${waitlist.spots} left right now` : "closed"})
         </label>
 
         <fieldset className="a-fieldset">
-          <legend>Sections</legend>
+          <legend>Features</legend>
           {c.sections.map((s, i) => (
             <div key={i} className="a-mail__section">
               <div className="a-inline a-wrap">
                 <strong className="a-mail__num">{String(i + 1).padStart(2, "0")}</strong>
-                <button type="button" className="a-btn a-btn--sm a-btn--ghost" disabled={i === 0} onClick={() => moveSection(i, -1)} aria-label={`Move section ${i + 1} up`}>↑</button>
-                <button type="button" className="a-btn a-btn--sm a-btn--ghost" disabled={i === c.sections.length - 1} onClick={() => moveSection(i, 1)} aria-label={`Move section ${i + 1} down`}>↓</button>
+                <button type="button" className="a-btn a-btn--sm a-btn--ghost" disabled={i === 0} onClick={() => moveSection(i, -1)} aria-label={`Move feature ${i + 1} up`}>↑</button>
+                <button type="button" className="a-btn a-btn--sm a-btn--ghost" disabled={i === c.sections.length - 1} onClick={() => moveSection(i, 1)} aria-label={`Move feature ${i + 1} down`}>↓</button>
                 <button type="button" className="a-btn a-btn--sm a-btn--danger" onClick={() => setC((p) => ({ ...p, sections: p.sections.filter((_, j) => j !== i) }))}>Remove</button>
               </div>
               <label className="a-field">
@@ -128,31 +181,34 @@ export function MailingComposer({
               </label>
               <label className="a-field">
                 <span>Text</span>
-                <textarea rows={4} value={s.body} maxLength={L.sectionBody} onChange={(e) => setSection(i, { body: e.target.value })} />
+                <textarea rows={3} value={s.body} maxLength={L.sectionBody} onChange={(e) => setSection(i, { body: e.target.value })} />
               </label>
+              <ImagePicker label="Picture beside it" value={s.imageUrl} onChange={(v) => setSection(i, { imageUrl: v })} />
             </div>
           ))}
           {c.sections.length < L.sections && (
-            <button type="button" className="a-btn a-btn--sm" onClick={() => setC((p) => ({ ...p, sections: [...p.sections, { title: "", body: "" }] }))}>
-              + Add section
+            <button type="button" className="a-btn a-btn--sm" onClick={() => setC((p) => ({ ...p, sections: [...p.sections, { title: "", body: "", imageUrl: "" }] }))}>
+              + Add feature
             </button>
           )}
           <small className="a-muted">
             Formatting: <code>**bold**</code>, <code>[link text](https://…)</code>, lines starting <code>- </code> become bullets, and a blank
-            line starts a new paragraph. <code>{"{name}"}</code> becomes each person&apos;s first name.
+            line starts a new paragraph. <code>{"{name}"}</code> becomes each person&apos;s first name. Features with a picture sit side by side
+            (zig-zagging); without one they&apos;re a card.
           </small>
         </fieldset>
 
-        <div className="a-grid2">
+        <fieldset className="a-fieldset">
+          <legend>Ending</legend>
           <label className="a-field">
-            <span>Button text <em>(optional)</em></span>
-            <input value={c.ctaLabel} maxLength={L.ctaLabel} onChange={(e) => set("ctaLabel", e.target.value)} />
+            <span>Closing headline</span>
+            <input value={c.closingHeadline} maxLength={L.closingHeadline} onChange={(e) => set("closingHeadline", e.target.value)} placeholder="Be one of the first." />
           </label>
           <label className="a-field">
-            <span>Button link</span>
-            <input value={c.ctaUrl} maxLength={L.ctaUrl} onChange={(e) => set("ctaUrl", e.target.value)} placeholder="/#build or https://…" />
+            <span>Closing text <em>(the button repeats under it)</em></span>
+            <textarea rows={2} value={c.closingText} maxLength={L.closingText} onChange={(e) => set("closingText", e.target.value)} />
           </label>
-        </div>
+        </fieldset>
 
         <div className="a-inline a-wrap">
           <button type="button" className="a-btn" disabled={busy} onClick={() => save.call("PUT", "/api/admin/mailing/draft", c, { success: "Draft saved.", refresh: false })}>
@@ -230,6 +286,28 @@ export function MailingComposer({
           srcDoc={preview}
           sandbox="allow-popups"
         />
+      </div>
+    </div>
+  );
+}
+
+/** Pick one of the ready-made email pictures, none, or paste your own image link. */
+function ImagePicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const preset = EMAIL_IMAGES.some((im) => im.url === value) ? value : value ? "custom" : "";
+  return (
+    <div className="a-field">
+      <span>{label}</span>
+      <div className="a-mail__pick">
+        <select value={preset} onChange={(e) => onChange(e.target.value === "custom" ? "https://" : e.target.value)} aria-label={label}>
+          <option value="">No picture</option>
+          {EMAIL_IMAGES.map((im) => (
+            <option key={im.url} value={im.url}>{im.label}</option>
+          ))}
+          <option value="custom">My own picture (link)…</option>
+        </select>
+        {preset === "custom" && (
+          <input value={value} maxLength={L.imageUrl} onChange={(e) => onChange(e.target.value)} placeholder="https://…/photo.jpg" aria-label={`${label} link`} />
+        )}
       </div>
     </div>
   );

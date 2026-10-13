@@ -834,7 +834,7 @@ a.a-row:hover {
 .a-mail__frame {
   display: block;
   width: 100%;
-  height: 900px;
+  height: max(600px, calc(100vh - 150px));
   border: 1px solid var(--line);
   border-radius: 14px;
   background: #0d0d0c;
@@ -863,4 +863,36 @@ a.a-row:hover {
 .a-tile--due {
   border-color: var(--lime-deep, #8fb820);
   background: #f7fde6;
+}
+.a-mail__preset select,
+.a-mail__pick select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+}
+.a-mail__pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.a-mail__pick input {
+  flex: 1;
+  min-width: 200px;
+}
+.a-mail__hl input:first-child {
+  width: 80px;
+  flex: none;
+}
+.a-mail__hl input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+}
+.a-mail__hl {
+  gap: 8px;
 }

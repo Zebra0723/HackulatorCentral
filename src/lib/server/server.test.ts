@@ -372,7 +372,7 @@ describe("mailing list", () => {
     await mailing.subscribe(db, { email: "ann@example.com", consent: true }); // no duplicate, keeps the name
     await mailing.subscribe(db, { email: "bob@example.com", name: "Bob", consent: true });
     await mailing.subscribe(db, { email: "cy@example.com", consent: true });
-    let subs = await mailing.listSubscribers(db);
+    const subs = await mailing.listSubscribers(db);
     expect(subs.map((s) => s.email).sort()).toEqual(["ann@example.com", "bob@example.com", "cy@example.com"]);
     expect(subs.find((s) => s.email === "ann@example.com")!.name).toBe("Ann");
 
@@ -406,7 +406,7 @@ describe("mailing list", () => {
       expect(ann.from).toBe("Hackulator <drop@example.com>");
       expect(ann.html).toContain(`https://example.com/unsubscribe?t=${annToken}`);
       expect(ann.headers["List-Unsubscribe"]).toBe(`<https://example.com/unsubscribe?t=${annToken}>`);
-      expect(ann.html).toContain("Issue #1");
+      expect(ann.html).toMatch(/Issue <span[^>]*>#1</);
       expect(ann.html).toContain("https://example.com/#build");
       expect(ann.text).toContain("Hello Ann");
       // Each person gets only their own unsubscribe link.
