@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { Sponsor } from "@/components/Sponsor";
 import { TrackingCard } from "@/components/tracking/TrackingCard";
 import { getDb } from "@/lib/server/db";
 import { trackingView } from "@/lib/server/orders";
@@ -21,10 +22,11 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
   return (
     <div className="track-page">
       <header className="track-page__bar">
-        <div className="container">
+        <div className="container track-page__bar-inner">
           <Link href="/" aria-label="Hackulator home">
             <Logo alt="" className="track-page__logo" />
           </Link>
+          <Sponsor tone="light" />
         </div>
       </header>
       <main className="container track-page__main">

@@ -31,7 +31,7 @@ const REQUEST_STATUS: Record<string, string> = {
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
 /** Look up your own spot by waitlist ID. The ID this browser was given is filled in automatically. */
-export function MySpot({ email }: { email?: string }) {
+export function MySpot() {
   const [id, setId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -146,7 +146,7 @@ export function MySpot({ email }: { email?: string }) {
       )}
 
       <p className="myspot__muted myspot__foot">
-        Lost your ID? {email ? <>Email <a href={`mailto:${email}`}>{email}</a> from the address you joined with.</> : "Get in touch."}{" "}
+        Lost your ID? Don&apos;t worry, your spot is still safe.{" "}
         Not on the list yet? <Link href="/#waitlist">Join free</Link>.
       </p>
     </div>

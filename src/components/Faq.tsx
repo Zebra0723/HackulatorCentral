@@ -1,7 +1,5 @@
 import { PRICES, formatPence } from "@/config/offer";
-import { siteConfig } from "@/config/site";
 
-const email = siteConfig.contact.email;
 
 const ITEMS: { q: string; a: React.ReactNode }[] = [
   {
@@ -96,7 +94,7 @@ const ITEMS: { q: string; a: React.ReactNode }[] = [
         </p>
         <p>
           When your spot comes up, we&apos;ll contact you personally with the price and details, and you decide then.
-          Nothing is ever charged on this website, and you can leave the list any time by emailing us.
+          Nothing is ever charged on this website, and you can leave the list any time.
         </p>
       </>
     ),
@@ -112,14 +110,10 @@ const ITEMS: { q: string; a: React.ReactNode }[] = [
   },
   {
     q: "How do I enquire?",
-    a: email ? (
+    a: (
       <p>
-        Save your build summary in Build Yours and send it to <a href={`mailto:${email}`}>{email}</a>.
-      </p>
-    ) : (
-      <p>
-        Enquiry contact details haven&apos;t been published yet. You can still put a build together and save or copy
-        the summary for later. Nothing is sent from this site.
+        Put your build together in Build Yours, then choose Ask a question or Send order request. You can also save
+        or copy the summary for later.
       </p>
     ),
   },

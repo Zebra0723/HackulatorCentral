@@ -1562,16 +1562,38 @@ textarea {
   outline: 2px solid #111;
   outline-offset: 6px;
 }
-.sponsor-band .sponsor__logo {
+.sponsor-band__logo {
   display: block;
   width: auto;
   height: clamp(44px, 6vw, 72px);
   max-width: min(360px, 80vw);
 }
-.sponsor-band .sponsor__name {
-  font-size: clamp(32px, 5vw, 56px);
-  font-weight: 800;
-  letter-spacing: -0.02em;
+.track-page__bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+}
+.track-page__bar .sponsor,
+.menu-sheet__foot .sponsor,
+.hero__copy .sponsor {
+  padding: 0;
+  border: 0;
+}
+.menu-sheet__foot .sponsor {
+  margin-top: 20px;
+  justify-content: center;
+}
+.hero__copy .sponsor {
+  margin-top: 28px;
+}
+.sponsor--light .sponsor__link {
+  border: 1px solid var(--line);
+}
+.sponsor--light .sponsor__label {
+  color: var(--ink-2);
+  font-weight: 700;
 }
 .sponsor {
   display: flex;
@@ -1600,15 +1622,14 @@ textarea {
   outline: 2px solid var(--night-text);
   outline-offset: 2px;
 }
-.site-footer .sponsor__logo {
+.sponsor__logo {
   display: block;
   width: auto;
-  height: 36px;
+  height: 32px;
   max-width: 200px;
 }
-.sponsor__name {
-  font-weight: 700;
-  font-size: 18px;
+.site-footer .sponsor__logo {
+  height: 36px;
 }
 .site-footer__legal {
   padding-top: 24px;
@@ -3851,132 +3872,3 @@ textarea {
   text-decoration: underline;
 }
 
-/* ---------- The Weekly Drop (mailing list) ---------- */
-
-.drop {
-  background: var(--lime);
-  color: var(--lime-ink);
-  padding: clamp(44px, 7vw, 80px) 0;
-  position: relative;
-  overflow: hidden;
-}
-.drop::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(-45deg, transparent 0 22px, rgba(28, 38, 6, 0.05) 22px 44px);
-  pointer-events: none;
-}
-.drop__inner {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: clamp(24px, 4vw, 56px);
-  align-items: center;
-}
-.drop__kicker {
-  margin: 0 0 10px;
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.drop__title {
-  margin: 0;
-  font-size: clamp(34px, 5vw, 56px);
-  line-height: 1.02;
-  letter-spacing: -0.03em;
-  font-weight: 850;
-}
-.drop__hl {
-  background: var(--lime-ink);
-  color: var(--lime);
-  padding: 0 0.18em;
-  border-radius: 0.18em;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
-}
-.drop__lede {
-  margin: 16px 0 0;
-  font-size: 17px;
-  line-height: 1.55;
-  max-width: 46ch;
-}
-.drop__form {
-  display: grid;
-  gap: 12px;
-  padding: 20px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(28, 38, 6, 0.15);
-  backdrop-filter: blur(6px);
-}
-.drop__row {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-}
-.drop__row input {
-  min-height: 50px;
-  padding: 0 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(28, 38, 6, 0.25);
-  background: #fff;
-  font: inherit;
-  font-size: 16px;
-  width: 100%;
-}
-.btn.drop__btn {
-  background: var(--lime-ink);
-  border-color: var(--lime-ink);
-  color: var(--lime);
-  min-height: 52px;
-  font-size: 17px;
-}
-.btn.drop__btn:hover:not([disabled]) {
-  background: #000;
-}
-.drop__consent {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  font-size: 14px;
-}
-.drop__consent input {
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  flex-shrink: 0;
-  accent-color: var(--lime-ink);
-}
-.drop__error {
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #fdecea;
-  color: var(--danger);
-  font-size: 14px;
-}
-.drop__done {
-  display: grid;
-  gap: 6px;
-  padding: 24px;
-  border-radius: 22px;
-  background: var(--lime-ink);
-  color: var(--lime);
-  font-size: 16px;
-}
-.drop__done strong {
-  font-size: 24px;
-}
-.drop__done span {
-  color: #e8f5c4;
-}
-.drop__off {
-  font-weight: 700;
-}
-@media (max-width: 820px) {
-  .drop__inner {
-    grid-template-columns: 1fr;
-  }
-}

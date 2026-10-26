@@ -20,14 +20,12 @@ export function Waitlist({
   taken: initialTaken,
   open,
   available,
-  email,
 }: {
   spots: number;
   taken: number;
   open: boolean;
-  /** False when no database is connected: the form is replaced by an email link. */
+  /** False when no database is connected: the form is replaced by a "opens soon" note. */
   available: boolean;
-  email?: string;
 }) {
   const [taken, setTaken] = useState(initialTaken);
   const [state, setState] = useState<State>({ kind: "idle" });
@@ -48,7 +46,6 @@ export function Waitlist({
           email: fd.get("email"),
           note: fd.get("note"),
           consent: fd.get("consent") === "on",
-          mailing: fd.get("mailing") === "on",
           website: fd.get("website"),
         }),
       });
@@ -137,7 +134,6 @@ export function Waitlist({
                 <p>Your spot is safe. We&apos;ll be in touch when it comes up.</p>
                 <p className="wl__fine">
                   Use the waitlist ID you got when you first joined to place your order.
-                  {email ? ` Lost it? Email ${email} from the same address and we'll send it to you.` : ""}
                 </p>
               </>
             ) : (
@@ -150,7 +146,7 @@ export function Waitlist({
                 )}
                 {state.waitlistId && <WaitlistIdCard id={state.waitlistId} />}
                 <p>
-                  Your place is reserved. We&apos;ll contact you personally{email ? ` from ${email}` : ""} when your spot
+                  Your place is reserved. We&apos;ll contact you personally when your spot
                   comes up. Still no obligation to buy.
                 </p>
               </>
@@ -159,22 +155,12 @@ export function Waitlist({
         ) : !available ? (
           <div className="wl__closed">
             <h3>The waitlist opens soon</h3>
-            <p>Online sign-ups aren&apos;t switched on yet.{email ? " Email us and we'll note your interest." : ""}</p>
-            {email && (
-              <a className="btn btn-primary" href={`mailto:${email}?subject=${encodeURIComponent("Hackulator waitlist")}`}>
-                Email {email}
-              </a>
-            )}
+            <p>Online sign-ups aren&apos;t switched on yet. Check back soon.</p>
           </div>
         ) : full || !open ? (
           <div className="wl__closed">
             <h3>{full ? `All ${spots} spots are taken` : "The waitlist is closed right now"}</h3>
-            <p>{full ? "Spots sometimes open up." : "It may reopen soon."} Email us and we&apos;ll let you know.</p>
-            {email && (
-              <a className="btn btn-primary" href={`mailto:${email}?subject=${encodeURIComponent("Hackulator waitlist")}`}>
-                Email {email}
-              </a>
-            )}
+            <p>{full ? "Spots sometimes open up, so check back soon." : "It may reopen soon."}</p>
           </div>
         ) : (
           <form className="wl__form" onSubmit={onSubmit}>
@@ -199,12 +185,6 @@ export function Waitlist({
             <label className="wl__consent">
               <input type="checkbox" name="consent" required />
               <span>I&apos;m happy to be contacted about my waitlist spot.</span>
-            </label>
-            <label className="wl__consent">
-              <input type="checkbox" name="mailing" />
-              <span>
-                Also send me <strong>The Weekly Drop</strong>, a short weekly build update. <em>(optional)</em>
-              </span>
             </label>
             {state.kind === "error" && (
               <p className="wl__error" role="alert">

@@ -80,13 +80,11 @@ type SubmitState =
 export function Configurator({
   catalogue,
   onlineSubmissions,
-  email,
   basePrice = null,
 }: {
   catalogue: Catalogue;
   /** True only when a database is configured and enquiries are actually stored. */
   onlineSubmissions: boolean;
-  email?: string;
   /** Formatted base price once the owner has set one; otherwise "to be confirmed". */
   basePrice?: string | null;
 }) {
@@ -186,12 +184,6 @@ export function Configurator({
   const closeDialog = () => dialogRef.current?.close?.();
 
   const isOrder = dialogMode === "order";
-  const mailBody = isOrder
-    ? `Hi Hackulator,\n\nI'd like to order this build. Please confirm the base price, the total and availability before I pay anything.\n\nWaitlist ID: ${waitlistId.trim() || "(paste your waitlist ID here)"}\n\n${summaryText}`
-    : `Hi Hackulator,\n\nI have a question about this build:\n\n\n${summaryText}`;
-  const mailto = email
-    ? `mailto:${email}?subject=${encodeURIComponent(isOrder ? "Hackulator order request" : "Hackulator build enquiry")}&body=${encodeURIComponent(mailBody)}`
-    : undefined;
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -784,11 +776,6 @@ export function Configurator({
                 <button type="submit" className="btn btn-primary" disabled={submit.kind === "sending"}>
                   {submit.kind === "sending" ? "Sending…" : isOrder ? "Send order request" : "Send question"}
                 </button>
-                {mailto && (
-                  <a className="btn btn-secondary" href={mailto}>
-                    Email instead
-                  </a>
-                )}
               </div>
               {submit.kind === "error" && (
                 <p className="field__error" role="alert">
@@ -800,22 +787,12 @@ export function Configurator({
             <>
               <p>
                 <strong>Online requests aren&apos;t switched on yet.</strong> Your build has <strong>not</strong> been
-                submitted.{" "}
-                {email ? (
-                  <>
-                    You can email it to <strong>{email}</strong> from your own email app instead.
-                  </>
-                ) : null}
+                submitted. Copy the summary to keep it for later.
               </p>
               <pre tabIndex={0} aria-label="Build summary text">
                 {summaryText}
               </pre>
               <div className="dialog__actions">
-                {mailto && (
-                  <a className="btn btn-primary" href={mailto}>
-                    {isOrder ? "Email order" : "Email question"}
-                  </a>
-                )}
                 <button type="button" className="btn btn-secondary" onClick={() => copy(summaryText, "Summary")}>
                   Copy summary
                 </button>

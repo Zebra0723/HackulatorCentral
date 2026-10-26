@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { Logo } from "./Logo";
 import { NAV_LINKS } from "./nav";
+import { Sponsor } from "./Sponsor";
 import { CloseIcon, MenuIcon } from "./icons";
 
 export function SiteHeader() {
@@ -71,6 +72,7 @@ export function SiteHeader() {
           <a href="#build" className="btn btn-primary btn-block" onClick={close}>
             Build your Hackulator
           </a>
+          <Sponsor tone="light" />
         </div>
       </dialog>
     </header>

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_CATALOGUE } from "@/config/offer";
 import { Configurator } from "../Configurator";
 
-const props = { catalogue: DEFAULT_CATALOGUE, onlineSubmissions: false, email: "hackulator@dailyos.uk" };
+const props = { catalogue: DEFAULT_CATALOGUE, onlineSubmissions: false };
 const summary = () => screen.getByRole("complementary");
 const subtotal = () => within(summary()).getByText(/^£\d+\.\d{2}$/, { selector: "strong" });
 
@@ -70,8 +70,8 @@ describe("Configurator", () => {
     await user.click(screen.getByRole("button", { name: "Send order request" }));
     const note = screen.getByText(/switched on yet/).closest("p")!;
     expect(note).toHaveTextContent(/has not been submitted/);
-    const link = screen.getByRole("link", { name: "Email order", hidden: true });
-    expect(link.getAttribute("href")!.startsWith("mailto:hackulator@dailyos.uk?")).toBe(true);
+    expect(screen.queryByRole("link", { name: /^Email/, hidden: true })).toBeNull();
+    expect(screen.getByRole("button", { name: "Copy summary", hidden: true })).toBeInTheDocument();
   });
 
   it("submits to the server and shows the reference only after a real response", async () => {

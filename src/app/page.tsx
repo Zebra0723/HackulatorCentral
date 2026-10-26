@@ -13,7 +13,6 @@ import { InteractiveHackulator } from "@/components/device/InteractiveHackulator
 import { StaticLauncher } from "@/components/device/StaticLauncher";
 import { FillText, Marquee, ScrollFx } from "@/components/scroll/ScrollFx";
 import { MockupTag } from "@/components/MockupNotice";
-import { MailingSignup } from "@/components/MailingSignup";
 import { Waitlist } from "@/components/Waitlist";
 import { loadCatalogue } from "@/lib/server/catalogue";
 import { dbMode, getDb } from "@/lib/server/db";
@@ -131,6 +130,7 @@ export default async function Home() {
                   Watch the concept
                 </a>
               </div>
+              <Sponsor tone="light" eager />
               <p className="hero__note small muted">
                 An independent project. Not affiliated with or endorsed by Casio. Nothing is for sale yet.
               </p>
@@ -341,7 +341,7 @@ export default async function Home() {
                 it&apos;s announced.
               </p>
             </div>
-            <Configurator catalogue={catalogue} onlineSubmissions={onlineSubmissions} email={contact.email} basePrice={basePrice} />
+            <Configurator catalogue={catalogue} onlineSubmissions={onlineSubmissions} basePrice={basePrice} />
           </div>
         </section>
 
@@ -351,7 +351,7 @@ export default async function Home() {
           <div className="container">
             <Chapter n="05" label="Waitlist" />
             <div data-reveal>
-              <Waitlist spots={wl.spots} taken={wl.taken} open={wl.open} available={dbReady} email={contact.email} />
+              <Waitlist spots={wl.spots} taken={wl.taken} open={wl.open} available={dbReady} />
             </div>
           </div>
         </section>
@@ -395,19 +395,14 @@ export default async function Home() {
                 Follow the build.
               </h2>
               <p className="lede">
-                {contact.email
-                  ? "Save your build summary and send it to us. We'll reply when we can."
-                  : "Enquiries open once contact details, pricing and fulfilment terms are published. Until then, you can still put a build together and save the summary."}
+                {onlineSubmissions
+                  ? "Put your build together in Build Yours and send it to us from there. We'll reply when we can."
+                  : "Enquiries open once pricing and fulfilment terms are published. Until then, you can still put a build together and save the summary."}
               </p>
               <div className="hero__actions">
                 <a className="btn btn-primary" href="#build">
                   Build your Hackulator
                 </a>
-                {contact.email && (
-                  <a className="btn btn-secondary" href={`mailto:${contact.email}`}>
-                    Email {contact.email}
-                  </a>
-                )}
               </div>
             </div>
             <div className="enquire__card" data-reveal>
@@ -431,7 +426,7 @@ export default async function Home() {
                 </li>
                 <li>
                   <span>Enquiries</span>
-                  <span>{contact.email ? "Open" : "Not yet open"}</span>
+                  <span>{onlineSubmissions ? "Open" : "Not yet open"}</span>
                 </li>
                 <li>
                   <span>Waitlist</span>
@@ -439,23 +434,6 @@ export default async function Home() {
                 </li>
               </ul>
             </div>
-          </div>
-        </section>
-
-        {/* Weekly email */}
-        <section className="drop" id="drop" aria-labelledby="drop-title">
-          <div className="container drop__inner" data-reveal>
-            <div className="drop__copy">
-              <p className="drop__kicker">The Weekly Drop</p>
-              <h2 className="drop__title" id="drop-title">
-                Follow the build, <span className="drop__hl">every week.</span>
-              </h2>
-              <p className="drop__lede">
-                One short email a week: what changed on the bench, sneak peeks and how many waitlist spots are left. Free,
-                no spam, unsubscribe in one click.
-              </p>
-            </div>
-            <MailingSignup available={dbReady} />
           </div>
         </section>
       </main>
