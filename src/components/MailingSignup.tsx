@@ -28,7 +28,7 @@ export function MailingSignup({ available }: { available: boolean }) {
   if (state.kind === "done") {
     return (
       <div className="drop__done" role="status">
-        <strong>You&apos;re on the list! 📬</strong>
+        <strong>You&apos;re on the list!</strong>
         <span>The next Weekly Drop lands in your inbox soon. Unsubscribe any time from the link in each email.</span>
       </div>
     );

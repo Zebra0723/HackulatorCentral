@@ -7,7 +7,7 @@ import { FilmStage } from "@/components/FilmStage";
 import { Logo } from "@/components/Logo";
 import { NAV_LINKS } from "@/components/nav";
 import { SiteHeader } from "@/components/SiteHeader";
-import { Sponsor } from "@/components/Sponsor";
+import { Sponsor, SponsorBand } from "@/components/Sponsor";
 import { DeviceFront } from "@/components/device/DeviceFront";
 import { InteractiveHackulator } from "@/components/device/InteractiveHackulator";
 import { StaticLauncher } from "@/components/device/StaticLauncher";
@@ -111,7 +111,7 @@ export default async function Home() {
                 </span>
                 {wl.open && wl.left > 0 && (
                   <a className="hero__wl" href="#waitlist">
-                    <span aria-hidden="true">🔥</span> {wl.left} of {wl.spots} waitlist spots left · Join free
+                    {wl.left} of {wl.spots} waitlist spots left · Join free
                   </a>
                 )}
               </div>
@@ -155,6 +155,8 @@ export default async function Home() {
         <Marquee
           items={["Snake", "2048", "Tetris", "Colour display", "Same familiar keys", "Custom UI", "Your name on the cover", `Only ${wl.spots} waitlist spots`]}
         />
+
+        <SponsorBand />
 
         {/* Overview */}
         <section className="section section--alt" id="overview" aria-labelledby="overview-title">
@@ -444,7 +446,7 @@ export default async function Home() {
         <section className="drop" id="drop" aria-labelledby="drop-title">
           <div className="container drop__inner" data-reveal>
             <div className="drop__copy">
-              <p className="drop__kicker">📬 The Weekly Drop</p>
+              <p className="drop__kicker">The Weekly Drop</p>
               <h2 className="drop__title" id="drop-title">
                 Follow the build, <span className="drop__hl">every week.</span>
               </h2>

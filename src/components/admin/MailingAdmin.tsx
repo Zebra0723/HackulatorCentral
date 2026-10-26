@@ -336,7 +336,7 @@ export function MailingComposer({
     if (!window.confirm(`Send “${doc.subject || "(no subject)"}” to ${subscribers} ${subscribers === 1 ? "person" : "people"}? This can't be undone.`)) return;
     const r = await send.call<{ sent: number; failed: number; issue: number; error?: string }>("POST", "/api/admin/mailing/send", { confirm: true, content: doc });
     if (r && r.failed) send.setError(`Issue #${r.issue}: sent to ${r.sent}, but ${r.failed} failed. ${r.error ?? ""}`);
-    else if (r) send.setMessage(`Issue #${r.issue} sent to ${r.sent} ${r.sent === 1 ? "person" : "people"}! 🎉`);
+    else if (r) send.setMessage(`Issue #${r.issue} sent to ${r.sent} ${r.sent === 1 ? "person" : "people"}!`);
   }
 
   const busy = test.busy || send.busy;
@@ -349,7 +349,7 @@ export function MailingComposer({
         <div className="eb__inbox">
           <label className="a-field">
             <span>Subject line</span>
-            <input value={doc.subject} maxLength={L.subject} onChange={(e) => { customSubject.current = true; setField("subject", e.target.value); }} placeholder="Your calculator is about to get a lot more fun 🎮" />
+            <input value={doc.subject} maxLength={L.subject} onChange={(e) => { customSubject.current = true; setField("subject", e.target.value); }} placeholder="Your calculator is about to get a lot more fun" />
           </label>
           <label className="a-field">
             <span>Preview text</span>
@@ -393,7 +393,7 @@ export function MailingComposer({
           <div className="eb__tabs" role="tablist">
             {(
               [
-                ["quick", "⚡ Quick"],
+                ["quick", "Quick"],
                 ["content", `Blocks (${doc.blocks.length})`],
                 ["add", "+ Add"],
                 ["theme", "Theme"],
@@ -439,7 +439,6 @@ export function MailingComposer({
               <div className="eb__lib-grid">
                 {BLOCK_LIBRARY.map((item) => (
                   <button key={item.type} type="button" className="eb__lib-item" onClick={() => addBlock(item.type)}>
-                    <span className="eb__lib-icon" aria-hidden="true">{item.icon}</span>
                     <strong>{item.label}</strong>
                     <span>{item.hint}</span>
                   </button>
@@ -485,7 +484,6 @@ export function MailingComposer({
                       setTab("content");
                     }}
                   >
-                    <span className="eb__tpl-emoji" aria-hidden="true">{pr.emoji}</span>
                     <strong>{pr.label}</strong>
                     <span style={{ color: t.accent }}>{t.name} theme · {pr.build().blocks.length} blocks</span>
                   </button>
@@ -522,8 +520,8 @@ export function MailingComposer({
             <strong>Live preview</strong>
             <span className="a-muted small">Type on headlines to edit them · click a block for more · drop a photo on a picture</span>
             <div className="a-seg" role="group" aria-label="Preview width">
-              <button type="button" aria-pressed={width === "desktop"} onClick={() => setWidth("desktop")}>🖥 Desktop</button>
-              <button type="button" aria-pressed={width === "phone"} onClick={() => setWidth("phone")}>📱 Phone</button>
+              <button type="button" aria-pressed={width === "desktop"} onClick={() => setWidth("desktop")}>Desktop</button>
+              <button type="button" aria-pressed={width === "phone"} onClick={() => setWidth("phone")}>Phone</button>
             </div>
             <label className="a-mail__as">
               as <input value={previewName} onChange={(e) => setPreviewName(e.target.value)} maxLength={30} aria-label="Preview first name" />
@@ -648,7 +646,6 @@ function Layers({
                 ⠿
               </span>
               <button type="button" className="eb__layer-title" onClick={() => onSelect(open ? null : b.id)} aria-expanded={open}>
-                <span aria-hidden="true">{lib.icon}</span>
                 <strong>{lib.label}</strong>
                 <span className="eb__layer-sum">{summary(b)}</span>
               </button>
@@ -747,7 +744,7 @@ function ImageField({ label, value, onChange, ctx, defaultOpen = false }: { labe
               </button>
             ))}
             <button type="button" className="eb__thumb eb__thumb--up" disabled={busy} onClick={() => fileRef.current?.click()}>
-              {busy ? "Uploading…" : "⬆ Upload"}
+              {busy ? "Uploading…" : "Upload"}
             </button>
             <input
               ref={fileRef}
@@ -1005,7 +1002,6 @@ function QuickPanel({
         <div className="eb__qd-styles">
           {QUICK_STYLES.map((st) => (
             <button key={st.id} type="button" aria-pressed={q.style === st.id} onClick={() => onChange({ style: st.id })}>
-              <span aria-hidden="true">{st.emoji}</span>
               <strong>{st.label}</strong>
               <small>{st.hint}</small>
             </button>
@@ -1043,8 +1039,8 @@ function QuickPanel({
 
       <div className="a-field">
         <span>4. Extras</span>
-        <label className="a-check"><input type="checkbox" checked={q.showSpots} onChange={(e) => onChange({ showSpots: e.target.checked })} /> 🔥 Live &ldquo;spots left&rdquo; counter</label>
-        <label className="a-check"><input type="checkbox" checked={q.showNumbers} onChange={(e) => onChange({ showNumbers: e.target.checked })} /> 🔢 Big numbers (3 games · 8 colours · 8 icons · £5 UI)</label>
+        <label className="a-check"><input type="checkbox" checked={q.showSpots} onChange={(e) => onChange({ showSpots: e.target.checked })} /> Live &ldquo;spots left&rdquo; counter</label>
+        <label className="a-check"><input type="checkbox" checked={q.showNumbers} onChange={(e) => onChange({ showNumbers: e.target.checked })} /> Big numbers (3 games · 8 colours · 8 icons · £5 UI)</label>
         <div className="eb__quick">
           {QUICK_CTAS.map((c) => (
             <button key={c.id} type="button" aria-pressed={q.cta === c.id} onClick={() => onChange({ cta: c.id })}>{c.label}</button>
@@ -1059,7 +1055,7 @@ function QuickPanel({
             <button type="button" className="a-btn a-btn--sm" onClick={onFineTune}>Fine-tune blocks →</button>
           </>
         ) : (
-          <button type="button" className="a-btn a-btn--primary" onClick={onBuild}>✨ Build my email</button>
+          <button type="button" className="a-btn a-btn--primary" onClick={onBuild}>Build my email</button>
         )}
       </div>
       {!linked && <small className="a-muted">Already edited the blocks by hand? Building again replaces them (Undo brings them back).</small>}
@@ -1093,7 +1089,7 @@ function QuickPhoto({ value, onChange, ctx }: { value: string; onChange: (v: str
         title="Click to choose, or drop a photo"
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- admin thumbnail of an email picture */}
-        {value ? <img src={value} alt="" /> : <span>📷<br />Photo</span>}
+        {value ? <img src={value} alt="" /> : <span>Photo</span>}
       </button>
       {open && (
         <div className="eb__qd-pop">

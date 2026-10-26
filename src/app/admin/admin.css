@@ -1125,9 +1125,6 @@ a.a-row:hover {
   border-color: var(--ink);
   box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.4);
 }
-.eb__lib-icon {
-  font-size: 24px;
-}
 .eb__lib-item span:last-child {
   font-size: 12px;
   color: var(--muted);
@@ -1175,15 +1172,6 @@ a.a-row:hover {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 800;
-}
-.eb__tpl {
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  column-gap: 12px;
-}
-.eb__tpl-emoji {
-  grid-row: span 2;
-  font-size: 30px;
 }
 .eb__tpl span:last-child {
   font-size: 12px;

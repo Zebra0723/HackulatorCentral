@@ -99,7 +99,7 @@ export function MySpot({ email }: { email?: string }) {
 
       {view && s && (
         <section className={`myspot__card myspot__card--${view.status}`} aria-live="polite">
-          <p className="myspot__hi">Hi {view.firstName}! 👋</p>
+          <p className="myspot__hi">Hi {view.firstName}!</p>
           <div className="myspot__num">
             {view.queueNumber != null ? (
               <>

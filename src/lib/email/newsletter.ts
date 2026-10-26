@@ -54,19 +54,19 @@ export interface NewsletterContent {
 }
 
 /** What each block is for, shown in the "Add block" library. */
-export const BLOCK_LIBRARY: { type: BlockType; icon: string; label: string; hint: string }[] = [
-  { type: "hero", icon: "🚀", label: "Hero", hint: "Giant headline, button and picture" },
-  { type: "image", icon: "🖼️", label: "Picture", hint: "A big photo or graphic" },
-  { type: "feature", icon: "✨", label: "Feature", hint: "Picture beside text" },
-  { type: "grid", icon: "🧩", label: "Cards", hint: "2 or 3 picture cards in a row" },
-  { type: "stats", icon: "🔢", label: "Big numbers", hint: "Up to 4 stats in a strip" },
-  { type: "waitlist", icon: "🔥", label: "Spots left", hint: "Live waitlist counter" },
-  { type: "banner", icon: "📣", label: "Banner", hint: "Huge announcement text" },
-  { type: "text", icon: "📝", label: "Text", hint: "Heading and paragraphs" },
-  { type: "quote", icon: "💬", label: "Quote", hint: "A quote or shout-out" },
-  { type: "button", icon: "👆", label: "Button", hint: "A single button" },
-  { type: "cta", icon: "🎯", label: "Call to action", hint: "Closing box with a button" },
-  { type: "divider", icon: "➖", label: "Divider", hint: "Line, dots or space" },
+export const BLOCK_LIBRARY: { type: BlockType; label: string; hint: string }[] = [
+  { type: "hero", label: "Hero", hint: "Giant headline, button and picture" },
+  { type: "image", label: "Picture", hint: "A big photo or graphic" },
+  { type: "feature", label: "Feature", hint: "Picture beside text" },
+  { type: "grid", label: "Cards", hint: "2 or 3 picture cards in a row" },
+  { type: "stats", label: "Big numbers", hint: "Up to 4 stats in a strip" },
+  { type: "waitlist", label: "Spots left", hint: "Live waitlist counter" },
+  { type: "banner", label: "Banner", hint: "Huge announcement text" },
+  { type: "text", label: "Text", hint: "Heading and paragraphs" },
+  { type: "quote", label: "Quote", hint: "A quote or shout-out" },
+  { type: "button", label: "Button", hint: "A single button" },
+  { type: "cta", label: "Call to action", hint: "Closing box with a button" },
+  { type: "divider", label: "Divider", hint: "Line, dots or space" },
 ];
 
 export function newBlockId() {
@@ -128,14 +128,13 @@ export const EMAIL_IMAGES = [
 const b = <T extends BlockType>(type: T, patch: Partial<Extract<EmailBlock, { type: T }>>) =>
   ({ ...createBlock(type), ...patch }) as Extract<EmailBlock, { type: T }>;
 
-export const NEWSLETTER_PRESETS: { id: string; label: string; emoji: string; build: () => NewsletterContent }[] = [
+export const NEWSLETTER_PRESETS: { id: string; label: string; build: () => NewsletterContent }[] = [
   {
     id: "intro",
     label: "Introducing the Hackulator",
-    emoji: "🧮",
     build: () => ({
       version: 2,
-      subject: "Meet the Hackulator 🧮✨",
+      subject: "Meet the Hackulator",
       preheader: "A scientific calculator with a colour screen and real games. Here's what it is, and how to get one.",
       theme: "midnight",
       blocks: [
@@ -195,10 +194,9 @@ export const NEWSLETTER_PRESETS: { id: string; label: string; emoji: string; bui
   {
     id: "launch",
     label: "Launch promo",
-    emoji: "🚀",
     build: () => ({
       version: 2,
-      subject: "Your calculator is about to get a lot more fun 🎮",
+      subject: "Your calculator is about to get a lot more fun",
       preheader: "Snake, 2048 and Tetris on a colour screen. Only a handful of spots in the first batch.",
       theme: "midnight",
       blocks: [
@@ -215,10 +213,9 @@ export const NEWSLETTER_PRESETS: { id: string; label: string; emoji: string; bui
   {
     id: "spotlight",
     label: "Game spotlight",
-    emoji: "🎮",
     build: () => ({
       version: 2,
-      subject: "Game of the week: Tetris 🧱",
+      subject: "Game of the week: Tetris",
       preheader: "Ghost piece, hard drop, line-clear flashes. Try it in your browser.",
       theme: "arcade",
       blocks: [
@@ -237,10 +234,9 @@ export const NEWSLETTER_PRESETS: { id: string; label: string; emoji: string; bui
   {
     id: "announce",
     label: "Big announcement",
-    emoji: "📣",
     build: () => ({
       version: 2,
-      subject: "📣 Big news from the Hackulator bench",
+      subject: "Big news from the Hackulator bench",
       preheader: "Something new just landed. Here's the first look.",
       theme: "sunset",
       blocks: [
@@ -255,10 +251,9 @@ export const NEWSLETTER_PRESETS: { id: string; label: string; emoji: string; bui
   {
     id: "lastcall",
     label: "Spots almost gone",
-    emoji: "🔥",
     build: () => ({
       version: 2,
-      subject: "🔥 The first batch is almost full",
+      subject: "The first batch is almost full",
       preheader: "Only a few waitlist spots left. Free to join, no obligation.",
       theme: "limepop",
       blocks: [
@@ -273,10 +268,9 @@ export const NEWSLETTER_PRESETS: { id: string; label: string; emoji: string; bui
   {
     id: "weekly",
     label: "Weekly update",
-    emoji: "🔧",
     build: () => ({
       version: 2,
-      subject: "This week on the bench 🔧",
+      subject: "This week on the bench",
       preheader: "What changed on the Hackulator this week, and how many spots are left.",
       theme: "paper",
       blocks: [
@@ -475,7 +469,7 @@ ${picture ? `<tr><td style="padding:22px 0 26px">${picture}</td></tr>` : `<tr><t
       const line = !w.open ? "The waitlist is closed right now" : w.left === 0 ? `All ${w.spots} spots are taken` : `of ${w.spots} spots left in the first batch`;
       return `<tr><td class="px" style="padding:0 24px 32px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${bg}" style="background:${bg};border-radius:24px;${onAccent ? "" : `border:1px solid ${t.line}`}">
-<tr><td align="center" style="padding:28px 24px 6px;font:800 12px/1 ${MONO};letter-spacing:3px;color:${onAccent ? fg : t.accent};text-transform:uppercase">🔥 Waitlist</td></tr>
+<tr><td align="center" style="padding:28px 24px 6px;font:800 12px/1 ${MONO};letter-spacing:3px;color:${onAccent ? fg : t.accent};text-transform:uppercase">Waitlist</td></tr>
 <tr><td align="center" style="padding:6px 24px 0;font:900 76px/1 ${FONT};letter-spacing:-3px;color:${fg}">${big}</td></tr>
 <tr><td align="center" style="padding:6px 24px 18px;font:700 17px/1.3 ${FONT};color:${fg}">${line}</td></tr>
 <tr><td style="padding:0 22px 20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${squares}</tr></table></td></tr>
@@ -762,10 +756,10 @@ export interface QuickDrop {
   cta: "waitlist" | "build" | "demo" | "film" | "none";
 }
 
-export const QUICK_STYLES: { id: QuickDrop["style"]; emoji: string; label: string; hint: string }[] = [
-  { id: "hype", emoji: "🚀", label: "Hype", hint: "Big hero, features side by side" },
-  { id: "update", emoji: "🔧", label: "Update", hint: "Clean cards, easy to read" },
-  { id: "spotlight", emoji: "🎮", label: "Spotlight", hint: "Huge banner and picture cards" },
+export const QUICK_STYLES: { id: QuickDrop["style"]; label: string; hint: string }[] = [
+  { id: "hype", label: "Hype", hint: "Big hero, features side by side" },
+  { id: "update", label: "Update", hint: "Clean cards, easy to read" },
+  { id: "spotlight", label: "Spotlight", hint: "Huge banner and picture cards" },
 ];
 
 export const QUICK_CTAS: { id: QuickDrop["cta"]; label: string; url: string }[] = [
@@ -792,7 +786,6 @@ export const QUICK_DEFAULT: QuickDrop = {
 };
 
 const DEFAULT_ART = ["/email/snake.png", "/email/2048.png", "/email/tetris.png", "/email/colours.png"];
-const STYLE_EMOJI = { hype: "🚀", update: "🔧", spotlight: "🎮" } as const;
 
 export function buildQuickDrop(q: QuickDrop): NewsletterContent {
   const items = q.items.filter((i) => i.title.trim() || i.text.trim()).slice(0, 4);
@@ -848,7 +841,7 @@ export function buildQuickDrop(q: QuickDrop): NewsletterContent {
   const first = items[0];
   return {
     version: 2,
-    subject: `${[headline, q.accentLine].filter((x) => x.trim()).join(" ").replace(/[.!]+$/, "")} ${STYLE_EMOJI[q.style]}`,
+    subject: `${[headline, q.accentLine].filter((x) => x.trim()).join(" ").replace(/[.!]+$/, "")}`,
     preheader: plainText(first ? [first.title, first.text].filter((x) => x.trim()).join(": ") : q.intro)
       .replace(/\{name\}/g, "")
       .replace(/\s+/g, " ")

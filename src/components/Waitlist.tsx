@@ -131,7 +131,6 @@ export function Waitlist({
                 <span key={i} style={{ ["--i" as string]: i }} />
               ))}
             </div>
-            <p className="wl__done-emoji" aria-hidden="true">🎉</p>
             {state.already ? (
               <>
                 <h3>You&apos;re already on the list!</h3>

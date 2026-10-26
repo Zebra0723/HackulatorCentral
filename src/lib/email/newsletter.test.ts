@@ -72,7 +72,7 @@ describe("weekly email builder", () => {
   it("has an introduction template that stays honest about the prototype", () => {
     const intro = NEWSLETTER_PRESETS.find((p) => p.id === "intro")!.build();
     const m = renderNewsletter(intro, { ...ctx, name: "Ada", waitlist: { spots: 10, left: 9, open: true } });
-    expect(m.subject).toBe("Meet the Hackulator 🧮✨");
+    expect(m.subject).toBe("Meet the Hackulator");
     expect(m.text).toContain("prototype in development");
     expect(m.text).toContain("no obligation to buy");
     expect(m.html).toContain("https://example.com/#build");

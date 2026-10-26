@@ -44,7 +44,7 @@ export default async function MailingPage() {
         </div>
         <div className={`a-tile${days == null || days >= 7 ? " a-tile--due" : ""}`}>
           <span className="a-tile__n">{days == null ? "—" : days === 0 ? "Today" : `${days}d`}</span>
-          <span className="a-tile__l">{days == null ? "nothing sent yet" : days >= 7 ? "since the last one · due! 📬" : "since the last one"}</span>
+          <span className="a-tile__l">{days == null ? "nothing sent yet" : days >= 7 ? "since the last one · due!" : "since the last one"}</span>
         </div>
       </div>
       <p className="a-note">
