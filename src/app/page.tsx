@@ -7,6 +7,7 @@ import { FilmStage } from "@/components/FilmStage";
 import { Logo } from "@/components/Logo";
 import { NAV_LINKS } from "@/components/nav";
 import { SiteHeader } from "@/components/SiteHeader";
+import { Sponsor } from "@/components/Sponsor";
 import { DeviceFront } from "@/components/device/DeviceFront";
 import { InteractiveHackulator } from "@/components/device/InteractiveHackulator";
 import { StaticLauncher } from "@/components/device/StaticLauncher";
@@ -469,6 +470,7 @@ export default async function Home() {
               ))}
             </nav>
           </div>
+          <Sponsor />
           <div className="site-footer__legal">
             <p>
               Hackulator is an independent prototype project{contact.businessName ? ` by ${contact.businessName}` : ""}.
